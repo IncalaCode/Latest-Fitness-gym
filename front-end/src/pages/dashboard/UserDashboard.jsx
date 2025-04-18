@@ -44,11 +44,11 @@ const UserDashboard = () => {
   // Animation variants
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
-      transition: { duration: 0.5 }
-    }
+      transition: { duration: 0.5 },
+    },
   };
 
   const staggerContainer = {
@@ -56,9 +56,9 @@ const UserDashboard = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
-      }
-    }
+        staggerChildren: 0.1,
+      },
+    },
   };
 
   if (isLoading) {
@@ -85,18 +85,18 @@ const UserDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Navbar />
-      
+
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.h1 
+        <motion.h1
           className="text-3xl font-bold mb-8 text-center sm:text-left"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          Welcome back, {userData?.fullName || 'Member'}
+          Welcome back, {userData?.fullName || "Member"}
         </motion.h1>
-        
-        <motion.div 
+
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           variants={staggerContainer}
           initial="hidden"
@@ -121,3 +121,4 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
+
