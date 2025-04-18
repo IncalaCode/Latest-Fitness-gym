@@ -26,12 +26,12 @@ const FitnessStats = ({ stats, variants }) => {
           <p className="text-2xl font-bold">{stats.averageDuration}</p>
         </div>
       </div>
-      <PrimaryButton 
+      {/* <PrimaryButton 
         colorScheme="redOrange" 
         className="w-full flex items-center justify-center"
       >
         View Fitness Report
-      </PrimaryButton>
+      </PrimaryButton> */}
     </motion.div>
   );
 };

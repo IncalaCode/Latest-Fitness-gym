@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useSnackbar } from 'notistack';
 import { PrimaryButton } from '../ui/Buttons';
 import { gradients } from '../../utils/themeColors';
+import usePayment from '../../hooks/usePayment';
+import PaymentMethodModal from '../payment/PaymentMethodModal';
 
-const PricingCard = ({ title, price, features, isPopular, gradient }) => {
+const PricingCard = ({ title, price, duration, features, isPopular, gradient, onSelectPlan }) => {
   const gradientClass = gradients[gradient] || gradients.redOrange;
   
   return (
@@ -26,9 +29,12 @@ const PricingCard = ({ title, price, features, isPopular, gradient }) => {
       
       <div className="p-8">
         <h3 className="text-2xl font-bold text-white mb-2">{title}</h3>
-        <div className="mb-6">
+        <div className="mb-2">
           <span className="text-3xl font-bold text-white">{price}</span>
           <span className="text-gray-400">/month</span>
+        </div>
+        <div className="mb-6">
+          <span className="text-sm text-gray-400">Valid for {duration} days</span>
         </div>
         
         <ul className="mb-8 space-y-4">
@@ -45,6 +51,7 @@ const PricingCard = ({ title, price, features, isPopular, gradient }) => {
         <PrimaryButton 
           colorScheme={isPopular ? "redOrange" : "blueWhite"} 
           className="w-full py-3 text-center"
+          onClick={() => onSelectPlan(title, price)}
         >
           Select Plan
         </PrimaryButton>
@@ -54,10 +61,40 @@ const PricingCard = ({ title, price, features, isPopular, gradient }) => {
 };
 
 const ServicesSection = () => {
+  const { enqueueSnackbar } = useSnackbar();
+  const { 
+    openPaymentMethodModal, 
+    closePaymentModal, 
+    processPayment, 
+    showPaymentModal, 
+    selectedPlan, 
+    isLoading, 
+    error,
+    setError 
+  } = usePayment();
+
+  // Display error notification when error state changes
+  useEffect(() => {
+    if (error) {
+      enqueueSnackbar(error, { 
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'center',
+        },
+        autoHideDuration: 5000
+      });
+      
+      // Clear error after showing notification
+      setError(null);
+    }
+  }, [error, enqueueSnackbar, setError]);
   const pricingPlans = [
     {
       title: "Fitness Basic",
       price: "1,200 ETB",
+      priceValue: 1200,
+      duration: 30,
       features: [
         "Full gym access",
         "Basic fitness assessment",
@@ -70,6 +107,8 @@ const ServicesSection = () => {
     {
       title: "Premium",
       price: "2,500 ETB",
+      priceValue: 2500,
+      duration: 30,
       features: [
         "Full gym & spa access",
         "Advanced fitness assessment",
@@ -84,6 +123,8 @@ const ServicesSection = () => {
     {
       title: "Spa Essentials",
       price: "1,800 ETB",
+      priceValue: 1800,
+      duration: 30,
       features: [
         "Full spa access",
         "2 massage treatments/month",
@@ -95,6 +136,31 @@ const ServicesSection = () => {
       gradient: "blueWhite"
     }
   ];
+
+  // Handle plan selection
+  const handleSelectPlan = (planTitle) => {
+    // Find the plan object to get the price value
+    const selectedPlan = pricingPlans.find(plan => plan.title === planTitle);
+    
+    if (!selectedPlan) {
+      enqueueSnackbar('Selected plan not found', { variant: 'error' });
+      return;
+    }
+
+    // Open payment method selection modal
+    openPaymentMethodModal(selectedPlan);
+  };
+
+  // Handle payment method selection
+  const handleSelectPaymentMethod = async (paymentMethod) => {
+      await processPayment(paymentMethod);
+      if (paymentMethod === 'incash') {
+        enqueueSnackbar('In-cash payment request submitted successfully', { 
+          variant: 'success',
+          autoHideDuration: 5000
+        });
+      }
+  };
 
   // Animation variants
   const fadeIn = {
@@ -140,13 +206,30 @@ const ServicesSection = () => {
               <PricingCard 
                 title={plan.title}
                 price={plan.price}
+                duration={plan.duration}
                 features={plan.features}
                 isPopular={plan.isPopular}
                 gradient={plan.gradient}
+                onSelectPlan={(title) => handleSelectPlan(title)}
               />
             </motion.div>
           ))}
         </div>
+        
+        {isLoading && (
+          <div className="flex justify-center mt-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+          </div>
+        )}
+        
+        {/* Payment Method Selection Modal */}
+        <PaymentMethodModal
+          isOpen={showPaymentModal}
+          onClose={closePaymentModal}
+          onSelectMethod={handleSelectPaymentMethod}
+          selectedPlan={selectedPlan}
+          isLoading={isLoading}
+        />
       </div>
     </section>
   );

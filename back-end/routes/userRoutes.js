@@ -9,7 +9,7 @@ router.post('/reset-password', userController.resetPassword);
 
 router.get('/', protect, authorize('Admin'), userController.getAllUsers);
 router.get('/:id', protect, userController.getUserById);
-router.put('/:id', protect, userController.updateUser);
+router.put('/:id', protect, userController.uploadProfilePhoto, userController.updateUser);
 router.delete('/:id', protect, authorize('Admin'), userController.deleteUser);
 
 module.exports = router;

@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { FiUser, FiEdit } from 'react-icons/fi';
 import EditProfileModal from './EditProfileModal';
 import useProfileUpdate from '../../../hooks/useProfileUpdate';
+import { IMAGE_URL } from '../../../config/config';
 
-const ProfileCard = ({ userData, variants }) => {
+const ProfileCard = ({ fetchDashboardData , userData, variants }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { updateProfile, isLoading } = useProfileUpdate(userData?.id);
+  const { updateProfile, isLoading } = useProfileUpdate(userData?.id ,fetchDashboardData);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -54,7 +55,7 @@ const ProfileCard = ({ userData, variants }) => {
         <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-700">
           {photoUrl ? (
             <img 
-              src={photoUrl} 
+              src={IMAGE_URL +  photoUrl} 
               alt={fullName} 
               className="w-full h-full object-cover"
             />

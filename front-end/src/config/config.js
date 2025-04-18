@@ -1,5 +1,6 @@
 
 export const API_URL = 'http://localhost:3001/api';
+export const IMAGE_URL = 'http://localhost:3001';
 export const AUTH_ENDPOINTS = {
   LOGIN: `${API_URL}/auth/login`,
   REGISTER: `${API_URL}/users/register`,
@@ -7,10 +8,6 @@ export const AUTH_ENDPOINTS = {
   VERIFY_EMAIL: `${API_URL}/auth/verify-email`,
 };
 
-export const USER_ENDPOINTS = {
-  PROFILE: `${API_URL}/users/profile`,
-  UPDATE_PROFILE: `${API_URL}/users/profile`,
-};
 
 export const TOKEN_ENDPOINTS = (token) => {
    return `${API_URL}/auth/token-refresh/${token}`
@@ -45,7 +42,6 @@ export const GET_HEADER = async (options = {}) => {
 export default {
   API_URL,
   AUTH_ENDPOINTS,
-  USER_ENDPOINTS,
   TOKEN_ENDPOINTS,
   API_ENDPOINT_FUNCTION,
   GET_HEADER

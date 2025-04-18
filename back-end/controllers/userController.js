@@ -3,6 +3,44 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const crypto = require('crypto');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    const uploadDir = 'uploads/profile';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'profile-' + uniqueSuffix + ext);
+  }
+});
+
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image! Please upload only images.'), false);
+  }
+};
+
+// Initialize multer upload
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: fileFilter
+});
+
+exports.uploadProfilePhoto = upload.single('photo');
 
 exports.register = async (req, res) => {
   try {
@@ -206,6 +244,16 @@ exports.updateUser = async (req, res) => {
     if (req.body.password) {
       const salt = await bcrypt.genSalt(10);
       req.body.password = await bcrypt.hash(req.body.password, salt);
+    }
+    
+    if (req.file) {
+      if (user.photoUrl) {
+        const oldPhotoPath = path.join(__dirname, '..', user.photoUrl.replace(/^\//, ''));
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+      req.body.photoUrl = `/${req.file.path.replace(/\\/g, '/')}`;
     }
     
     await user.update(req.body);

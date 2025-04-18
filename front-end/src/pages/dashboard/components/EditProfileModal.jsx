@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiUser, FiMail, FiPhone, FiMapPin, FiTarget, FiHeart } from 'react-icons/fi';
+import { FiX, FiUser, FiMail, FiPhone, FiMapPin, FiTarget, FiHeart, FiUpload, FiImage } from 'react-icons/fi';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { PrimaryButton } from '../../../components/ui/Buttons';
+import { IMAGE_URL } from '../../../config/config';
 
-const EditProfileModal = ({ isOpen, onClose, userData, onSubmit, isLoading }) => {
+const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => {
+  const [previewImage, setPreviewImage] = useState(IMAGE_URL + userData?.photoUrl || null);
+  const fileInputRef = useRef(null);
+
   if (!isOpen) return null;
 
   const initialValues = {
@@ -26,6 +30,22 @@ const EditProfileModal = ({ isOpen, onClose, userData, onSubmit, isLoading }) =>
   const contentVariants = {
     hidden: { opacity: 0, y: 50 },
     visible: { opacity: 1, y: 0 }
+  };
+
+  const handleImageChange = (event, setFieldValue) => {
+    const file = event.currentTarget.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result);
+        setFieldValue('photoUrl', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
   };
 
   return (
@@ -63,8 +83,50 @@ const EditProfileModal = ({ isOpen, onClose, userData, onSubmit, isLoading }) =>
               initialValues={initialValues}
               onSubmit={onSubmit}
             >
-              {({ isSubmitting, values }) => (
+              {({ isSubmitting, values, setFieldValue }) => (
                 <Form className="space-y-5">
+                  {/* Profile Image Upload */}
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-700 mb-4 relative group">
+                      {previewImage ? (
+                        <img 
+                          src={previewImage} 
+                          alt={values.fullName || 'Profile'} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-white text-3xl font-bold">
+                            {values.fullName ? values.fullName.split(' ').map(name => name[0]).join('') : '?'}
+                          </span>
+                        </div>
+                      )}
+                      <div 
+                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        onClick={triggerFileInput}
+                      >
+                        <FiUpload className="text-white text-2xl" />
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, setFieldValue)}
+                    />
+                    <button
+                      type="button"
+                      onClick={triggerFileInput}
+                      className="flex items-center text-sm text-blue-400 hover:text-blue-300"
+                    >
+                      <FiImage className="mr-1" /> Change Profile Picture
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Click on the image to upload a new profile picture
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Full Name */}
                     <div>
@@ -158,18 +220,8 @@ const EditProfileModal = ({ isOpen, onClose, userData, onSubmit, isLoading }) =>
                     <ErrorMessage name="address" component="p" className="mt-1 text-sm text-red-500" />
                   </div>
 
-                  {/* Profile Photo URL */}
-                  <div>
-                    <label htmlFor="photoUrl" className="block text-gray-300 mb-2">Profile Photo URL (Optional)</label>
-                    <Field
-                      type="text"
-                      id="photoUrl"
-                      name="photoUrl"
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                      placeholder="https://example.com/your-photo.jpg"
-                    />
-                    <ErrorMessage name="photoUrl" component="p" className="mt-1 text-sm text-red-500" />
-                  </div>
+                  {/* Hidden field for photoUrl */}
+                  <Field type="hidden" name="photoUrl" />
 
                   {/* Fitness Goals */}
                   <div>

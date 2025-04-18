@@ -66,7 +66,7 @@ const useLogin = () => {
         });
         
         // Redirect to dashboard or home page
-        navigate( authData.user.role == "member" ? '/admin-dashboard' : '/user-dashboard');
+        navigate( authData.user.role == "member" ? '/user-dashboard' : '/admin-dashboard');
       } else {
         throw new Error('Authentication token not received');
       }
