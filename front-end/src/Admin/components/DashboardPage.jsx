@@ -1,23 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import StatsCards from "./StatsCards";
-import {
-  Users,
-  UserCheck,
-  Calendar,
-  Check,
-  X,
-  Bell,
-  MoreHorizontal,
-  DollarSign,
-} from "lucide-react";
+import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import PendingApprovalsTab from "./tabs/PendingApprovalsTab";
 import MembersTab from "./tabs/MembersTab";
 import ExpiringMembershipsTab from "./tabs/ExpiringMembershipsTab";
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("members");
+  const [stats, setStats] = useState({ totalMembers: 0, activeToday: 0 });
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/api/admin/stats");
+        if (res.data.success) {
+          setStats(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard stats:", err);
+      }
+    };
+
+    fetchStats();
+  }, []);
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
@@ -25,17 +32,17 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <StatsCards
           title="Total Members"
-          value="1,248"
+          value={stats.totalMembers.toLocaleString()}
           description="Active memberships in your facility"
-          change="+12%"
+          change="+12%" // You can replace with real logic later
           icon={<Users className="h-6 w-6 text-blue-500" />}
         />
 
         <StatsCards
           title="Active Today"
-          value="187"
+          value={stats.activeToday.toLocaleString()}
           description="Members who visited today"
-          change="+8%"
+          change="+8%" // You can replace with real logic later
           icon={<UserCheck className="h-6 w-6 text-green-500" />}
         />
 
