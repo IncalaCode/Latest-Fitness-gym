@@ -2,25 +2,62 @@ import { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { API_URL, GET_HEADER } from '../config/config';
 
-const useProfileUpdate = (userId) => {
+const useProfileUpdate = (userId , fetchDashboardData) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { enqueueSnackbar } = useSnackbar();
+
+  const base64ToFile = (base64String, filename) => {
+    if (!base64String || typeof base64String !== 'string' || !base64String.startsWith('data:')) {
+      return null;
+    }
+
+    const arr = base64String.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    
+    return new File([u8arr], filename, { type: mime });
+  };
 
   const updateProfile = async (userData) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Get authentication headers
-      const options = await GET_HEADER({ isJson: true });
+      const options = await GET_HEADER();
+      const { email, photoUrl, ...updateData } = userData;
       
-      // Make API call to update user
+      const formData = new FormData();
+      
+      Object.keys(updateData).forEach(key => {
+        formData.append(key, updateData[key]);
+      });
+      
+      if (photoUrl) {
+        if (photoUrl instanceof File) {
+          formData.append('photo', photoUrl);
+        } else if (typeof photoUrl === 'string' && photoUrl.startsWith('data:')) {
+          const photoFile = base64ToFile(photoUrl, `profile-${Date.now()}.jpg`);
+          if (photoFile) {
+            formData.append('photo', photoFile);
+          }
+        }
+      }
+
+      console.log(Object.fromEntries(formData));
+      
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: 'PUT',
         headers: options.headers,
-        body: JSON.stringify(userData)
+        body: formData
       });
+
 
       const data = await response.json();
 
@@ -28,21 +65,25 @@ const useProfileUpdate = (userId) => {
         throw new Error(data.message || 'Failed to update profile');
       }
 
-      // Update local storage with new user data
       const authData = localStorage.getItem('auth');
       if (authData) {
         const parsedAuth = JSON.parse(authData);
+        const originalEmail = parsedAuth.user.email;
         parsedAuth.user = {
           ...parsedAuth.user,
-          ...data.data
+          ...data.data,
+          email: originalEmail
         };
         localStorage.setItem('auth', JSON.stringify(parsedAuth));
       }
 
+      fetchDashboardData()
+      
       enqueueSnackbar('Profile updated successfully', { 
         variant: 'success',
         autoHideDuration: 3000
       });
+
 
       return data.data;
     } catch (error) {
