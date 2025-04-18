@@ -14,6 +14,14 @@ import {
   Menu,
 } from "lucide-react";
 
+
+const handleLogout = () => {
+  localStorage.removeItem("auth");
+  sessionStorage.clear();
+
+  navigate("/login"); // redirect to login
+};
+
 export default function Sidebar({ isOpen, toggleSidebar }) {
   return (
     <div
@@ -133,15 +141,17 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           icon={<LogOut size={20} />}
           text="Logout"
           isOpen={isOpen}
+          onClick={handleLogout}
         />
       </div>
     </div>
   );
 }
 
-function SidebarLink({ href, icon, text, active = false, isOpen }) {
+function SidebarLink({ href, icon, text, active = false, isOpen ,onClick }) {
   return (
     <Link
+    onClick={onClick}
       href={href}
       className={`flex items-center px-4 py-3 text-sm ${
         active

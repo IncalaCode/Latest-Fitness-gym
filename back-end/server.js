@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const routes = require('./routes');
 const db = require('./config/InitDatabase');
 const path = require('path');
+const { initScheduledTasks } = require('./utils/scheduledTasks');
 const app = express();
 const PORT = process.env.PORT || 3001;
 require('dotenv').config();
@@ -37,6 +38,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     const dbInfo = await db.initialize();
+    initScheduledTasks();
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -1,5 +1,6 @@
 const { Payment, User } = require('../models');
 const { Op } = require('sequelize');
+const { sendMembershipExpirationReminder } = require('../utils/emailService');
 
 exports.getExpiringMemberships = async (req, res) => {
   try {
@@ -78,19 +79,141 @@ exports.sendMembershipReminder = async (req, res) => {
       });
     }
     
-    // Here you would implement the actual reminder sending logic
-    // This could be an SMS, email, or notification
+    // Calculate days remaining until expiration
+    const expiryDate = new Date(membership.expiryDate);
+    const today = new Date();
+    const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
     
-    // For now, we'll just return a success response
-    return res.status(200).json({
-      success: true,
-      message: `Reminder sent to ${membership.user.firstName} ${membership.user.lastName}`
-    });
+    try {
+      // Send the email reminder
+      await sendMembershipExpirationReminder(
+        membership.user,
+        membership,
+        daysRemaining
+      );
+      
+      return res.status(200).json({
+        success: true,
+        message: `Reminder sent to ${membership.user.firstName} ${membership.user.lastName}`,
+        daysRemaining
+      });
+    } catch (emailError) {
+      console.error('Error sending email reminder:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error sending email reminder',
+        error: emailError.message
+      });
+    }
   } catch (error) {
     console.error('Error sending membership reminder:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error while sending reminder',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Send reminders for all memberships expiring soon
+ * @route   POST /api/memberships/send-reminders
+ * @access  Private/Admin
+ */
+exports.sendExpirationReminders = async (req, res) => {
+  try {
+    const { days = 7 } = req.body; // Default to 7 days if not specified
+    
+    // Calculate the date range for expiring memberships
+    const today = new Date();
+    const targetDate = new Date();
+    targetDate.setDate(today.getDate() + parseInt(days));
+    
+    // Find memberships expiring in the specified number of days
+    const expiringMemberships = await Payment.findAll({
+      where: {
+        status: 'completed',
+        expiryDate: {
+          [Op.gte]: today, // Greater than or equal to today
+          [Op.lte]: targetDate // Less than or equal to target date
+        }
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phoneNumber']
+        }
+      ]
+    });
+    
+    if (expiringMemberships.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No memberships expiring in the specified time frame',
+        count: 0
+      });
+    }
+    
+    // Send reminders to each member
+    const reminderResults = await Promise.all(
+      expiringMemberships.map(async (membership) => {
+        // Skip if user is not found or has no email
+        if (!membership.user || !membership.user.email) {
+          return {
+            membershipId: membership.id,
+            success: false,
+            message: 'User not found or has no email'
+          };
+        }
+        
+        // Calculate days remaining until expiration
+        const expiryDate = new Date(membership.expiryDate);
+        const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        
+        try {
+          // Send the email reminder
+          await sendMembershipExpirationReminder(
+            membership.user,
+            membership,
+            daysRemaining
+          );
+          
+          return {
+            membershipId: membership.id,
+            userId: membership.user.id,
+            email: membership.user.email,
+            daysRemaining,
+            success: true
+          };
+        } catch (error) {
+          console.error(`Error sending reminder for membership ${membership.id}:`, error);
+          return {
+            membershipId: membership.id,
+            userId: membership.user.id,
+            email: membership.user.email,
+            success: false,
+            message: error.message
+          };
+        }
+      })
+    );
+    
+    // Count successful reminders
+    const successfulReminders = reminderResults.filter(result => result.success);
+    
+    res.status(200).json({
+      success: true,
+      message: `Successfully sent ${successfulReminders.length} out of ${expiringMemberships.length} reminders`,
+      count: expiringMemberships.length,
+      successCount: successfulReminders.length,
+      results: reminderResults
+    });
+  } catch (error) {
+    console.error('Error sending expiration reminders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
       error: error.message
     });
   }

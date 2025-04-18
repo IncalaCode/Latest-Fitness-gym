@@ -17,14 +17,13 @@ const ProfileCard = ({ fetchDashboardData , userData, variants }) => {
     setIsModalOpen(false);
   };
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+  // Updated handleSubmit function to handle both profile and password data
+  const handleSubmit = async (profileData, passwordData) => {
     try {
-      await updateProfile(values);
+      await updateProfile(profileData, passwordData);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error updating profile:', error);
-    } finally {
-      setSubmitting(false);
     }
   };
 
