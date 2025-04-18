@@ -20,7 +20,7 @@ const getDailySalt = () => {
   return crypto.createHmac('sha256', QR_SECRET_KEY).update(dateString).digest('hex');
 };
 
-const generateQRData = (payment, user, isTemporary = false) => {
+exports.generateQRData = (payment, user, isTemporary = false) => {
   const dailySalt = getDailySalt();
   
   const baseData = {
@@ -57,7 +57,7 @@ const generateQRData = (payment, user, isTemporary = false) => {
   };
 };
 
-const calculateExpiryDate = (paymentDate = new Date()) => {
+exports.calculateExpiryDate = (paymentDate = new Date()) => {
   const expiryDate = new Date(paymentDate);
   expiryDate.setDate(expiryDate.getDate() + 30);
   return expiryDate;

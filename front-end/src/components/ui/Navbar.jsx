@@ -28,7 +28,7 @@ const Navbar = () => {
       if (user) {
         setIsLoggedIn(true);
         const userData = JSON.parse(user);
-        setIsAdmin(userData.user.role === 'admin');
+        setIsAdmin(userData.user.role === 'Admin');
       } else {
         setIsLoggedIn(false);
         setIsAdmin(false);
