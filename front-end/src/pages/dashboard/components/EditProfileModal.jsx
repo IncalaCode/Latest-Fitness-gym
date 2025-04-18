@@ -1,12 +1,18 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiUser, FiMail, FiPhone, FiMapPin, FiTarget, FiHeart, FiUpload, FiImage } from 'react-icons/fi';
+import { FiX, FiUser, FiMail, FiPhone, FiMapPin, FiTarget, FiHeart, FiUpload, FiImage, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { z } from 'zod';
+import { toFormikValidationSchema } from 'zod-formik-adapter';
 import { PrimaryButton } from '../../../components/ui/Buttons';
 import { IMAGE_URL } from '../../../config/config';
 
 const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => {
   const [previewImage, setPreviewImage] = useState(IMAGE_URL + userData?.photoUrl || null);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -19,8 +25,60 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
     address: userData?.address || '',
     fitnessGoals: userData?.fitnessGoals || '',
     medicalConditions: userData?.medicalConditions || '',
-    photoUrl: userData?.photoUrl || ''
+    photoUrl: userData?.photoUrl || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   };
+
+  // Create a Zod schema for validation
+  const validationSchema = z.object({
+    fullName: z.string().min(1, 'Full name is required'),
+    email: z.string().email('Invalid email address'),
+    phone: z.string().min(1, 'Phone number is required'),
+    emergencyContact: z.string().optional(),
+    address: z.string().optional(),
+    fitnessGoals: z.string().optional(),
+    medicalConditions: z.string().optional(),
+    photoUrl: z.string().optional(),
+    currentPassword: z.string().optional(),
+    newPassword: z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character')
+      .optional(),
+    confirmPassword: z.string().optional()
+  })
+  // Add conditional validation
+  .refine(data => {
+    if (data.newPassword && data.newPassword.length > 0) {
+      return data.currentPassword && data.currentPassword.length > 0;
+    }
+    return true;
+  }, {
+    message: "Current password is required to set a new password",
+    path: ["currentPassword"]
+  })
+  .refine(data => {
+    if (data.newPassword && data.newPassword.length > 0) {
+      return data.newPassword === data.confirmPassword;
+    }
+    return true;
+  }, {
+    message: "Passwords must match",
+    path: ["confirmPassword"]
+  })
+  .refine(data => {
+    if (data.confirmPassword && data.confirmPassword.length > 0) {
+      return data.newPassword && data.newPassword.length > 0;
+    }
+    return true;
+  }, {
+    message: "New password is required",
+    path: ["newPassword"]
+  });
 
   const modalVariants = {
     hidden: { opacity: 0 },
@@ -46,6 +104,31 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
 
   const triggerFileInput = () => {
     fileInputRef.current.click();
+  };
+
+  const handleSubmit = (values, { setSubmitting }) => {
+    // Extract password data if password fields are filled
+    const passwordData = showPasswordFields && values.newPassword 
+      ? {
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword
+        }
+      : null;
+    
+    // Extract profile data
+    const profileData = {
+      fullName: values.fullName,
+      phone: values.phone,
+      emergencyContact: values.emergencyContact,
+      address: values.address,
+      fitnessGoals: values.fitnessGoals,
+      medicalConditions: values.medicalConditions,
+      photoUrl: values.photoUrl
+    };
+    
+    // Call the onSubmit function with both profile and password data
+    onSubmit(profileData, passwordData);
+    setSubmitting(false);
   };
 
   return (
@@ -81,9 +164,10 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
           <div className="p-6">
             <Formik
               initialValues={initialValues}
-              onSubmit={onSubmit}
+              validationSchema={toFormikValidationSchema(validationSchema)}
+              onSubmit={handleSubmit}
             >
-              {({ isSubmitting, values, setFieldValue }) => (
+              {({ isSubmitting, values, setFieldValue, errors, touched }) => (
                 <Form className="space-y-5">
                   {/* Profile Image Upload */}
                   <div className="flex flex-col items-center mb-6">
@@ -185,7 +269,7 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
 
                     {/* Emergency Contact */}
                     <div>
-                      <label htmlFor="emergencyContact" className="block text-gray-300 mb-2">Emergency Contact</label>
+                  <label htmlFor="emergencyContact" className="block text-gray-300 mb-2">Emergency Contact</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <FiPhone className="text-gray-500" />
@@ -262,6 +346,113 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
                       />
                     </div>
                   </div>
+
+                  {/* Password Change Toggle */}
+                  <div className="pt-4 border-t border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordFields(!showPasswordFields)}
+                      className="flex items-center text-blue-400 hover:text-blue-300"
+                    >
+                      <FiLock className="mr-2" />
+                      {showPasswordFields ? 'Hide Password Fields' : 'Change Password'}
+                    </button>
+                  </div>
+
+                  {/* Password Fields */}
+                  {showPasswordFields && (
+                    <div className="space-y-4 pt-2 pb-2 px-4 bg-gray-750 rounded-lg">
+                      {/* Current Password */}
+                      <div>
+                        <label htmlFor="currentPassword" className="block text-gray-300 mb-2">Current Password</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FiLock className="text-gray-500" />
+                          </div>
+                          <Field
+                            type={showCurrentPassword ? "text" : "password"}
+                            id="currentPassword"
+                            name="currentPassword"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            placeholder="Enter your current password"
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          >
+                            {showCurrentPassword ? (
+                              <FiEyeOff className="text-gray-500 hover:text-gray-400" />
+                            ) : (
+                              <FiEye className="text-gray-500 hover:text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                        <ErrorMessage name="currentPassword" component="p" className="mt-1 text-sm text-red-500" />
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label htmlFor="newPassword" className="block text-gray-300 mb-2">New Password</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FiLock className="text-gray-500" />
+                          </div>
+                          <Field
+                            type={showNewPassword ? "text" : "password"}
+                            id="newPassword"
+                            name="newPassword"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            placeholder="Enter your new password"
+                          />
+                          <button
+                          type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                          >
+                            {showNewPassword ? (
+                              <FiEyeOff className="text-gray-500 hover:text-gray-400" />
+                            ) : (
+                              <FiEye className="text-gray-500 hover:text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                        <ErrorMessage name="newPassword" component="p" className="mt-1 text-sm text-red-500" />
+                        <p className="mt-1 text-xs text-gray-400">
+                          Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
+                        </p>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div>
+                        <label htmlFor="confirmPassword" className="block text-gray-300 mb-2">Confirm Password</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FiLock className="text-gray-500" />
+                          </div>
+                          <Field
+                            type={showConfirmPassword ? "text" : "password"}
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            placeholder="Confirm your new password"
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? (
+                              <FiEyeOff className="text-gray-500 hover:text-gray-400" />
+                            ) : (
+                              <FiEye className="text-gray-500 hover:text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                        <ErrorMessage name="confirmPassword" component="p" className="mt-1 text-sm text-red-500" />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex justify-end space-x-3 pt-4">
