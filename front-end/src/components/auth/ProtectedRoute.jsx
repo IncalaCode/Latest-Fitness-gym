@@ -1,10 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowed = [] }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
   const location = useLocation();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -17,13 +20,23 @@ const ProtectedRoute = ({ children }) => {
           enqueueSnackbar('Please login to access this page', { variant: 'warning' });
         } else {
           // Check if token is expired
-          const { token } = JSON.parse(authData);
+          const parsedAuthData = JSON.parse(authData);
+          const { token, user } = parsedAuthData;
+          
           if (!token) {
             setIsAuthenticated(false);
             localStorage.removeItem('auth');
             enqueueSnackbar('Your session has expired. Please login again', { variant: 'warning' });
           } else {
             setIsAuthenticated(true);
+            setUserRole(user.role);
+            
+            // Check if user has required role to access this route
+            if (allowed.length === 0 || allowed.includes(user.role)) {
+              setHasAccess(true);
+            } else {
+              setHasAccess(false);
+            }
           }
         }
       } catch (error) {
@@ -35,7 +48,7 @@ const ProtectedRoute = ({ children }) => {
     };
 
     checkAuth();
-  }, [enqueueSnackbar]);
+  }, [enqueueSnackbar, allowed]);
 
   if (isLoading) {
     return (
@@ -48,6 +61,12 @@ const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated) {
     // Redirect to login page but save the location they tried to access
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!hasAccess) {
+    // User is authenticated but doesn't have the required role
+    enqueueSnackbar('You do not have permission to access this page', { variant: 'error' });
+    return <Navigate to="/" replace />;
   }
 
   return children;
