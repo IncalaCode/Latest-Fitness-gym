@@ -1,31 +1,26 @@
-import { Check, X } from "lucide-react";
+import React from "react";
+import { Check, X, Loader } from "lucide-react";
+import usePendingApprovals from "../../../hooks/usePendingApprovals";
+
 export default function PendingApprovalsTab() {
-  const pendingApprovals = [
-    {
-      id: 1,
-      name: "Alex Morgan",
-      phone: "+1 (555) 123-4567",
-      email: "alex.morgan@example.com",
-      membershipType: "Premium",
-      registrationDate: "2023-04-05",
-    },
-    {
-      id: 2,
-      name: "Jordan Smith",
-      phone: "+1 (555) 987-6543",
-      email: "jordan.smith@example.com",
-      membershipType: "Standard",
-      registrationDate: "2023-04-06",
-    },
-    {
-      id: 3,
-      name: "Taylor Lee",
-      phone: "+1 (555) 456-7890",
-      email: "taylor.lee@example.com",
-      membershipType: "Premium",
-      registrationDate: "2023-04-07",
-    },
-  ];
+  const {
+    pendingApprovals,
+    loading,
+    processingIds,
+    handleApprove,
+    handleReject
+  } = usePendingApprovals();
+
+  if (loading) {
+    return (
+      <div className="p-6 flex justify-center items-center h-64">
+        <div className="flex flex-col items-center">
+          <Loader className="h-8 w-8 animate-spin text-gray-500" />
+          <p className="mt-2 text-gray-500">Loading pending approvals...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -36,7 +31,12 @@ export default function PendingApprovalsTab() {
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      {pendingApprovals.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No pending approvals at this time
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-gray-200">
@@ -64,28 +64,44 @@ export default function PendingApprovalsTab() {
             {pendingApprovals.map((approval) => (
               <tr key={approval.id}>
                 <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                  {approval.name}
+                  {approval.user.fullName}
                 </td>
                 <td className="py-4 px-4 text-sm text-gray-500">
-                  {approval.phone}
+                  {approval.user.phone}
                 </td>
                 <td className="py-4 px-4 text-sm text-gray-500">
-                  {approval.email}
+                  {approval.user.email}
                 </td>
                 <td className="py-4 px-4 text-sm text-gray-500">
-                  {approval.membershipType}
+                  {approval.planTitle}
                 </td>
                 <td className="py-4 px-4 text-sm text-gray-500">
-                  {approval.registrationDate}
+                  {approval.createdAt}
                 </td>
                 <td className="py-4 px-4 text-sm text-gray-500">
                   <div className="flex space-x-2">
-                    <button className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                      <Check className="h-4 w-4 mr-1" />
+                    <button 
+                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleApprove(approval.id)}
+                      disabled={processingIds.includes(approval.id)}
+                    >
+                      {processingIds.includes(approval.id) ? (
+                        <Loader className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-1" />
+                      )}
                       Approve
                     </button>
-                    <button className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                      <X className="h-4 w-4 mr-1" />
+                    <button 
+                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleReject(approval.id)}
+                      disabled={processingIds.includes(approval.id)}
+                    >
+                      {processingIds.includes(approval.id) ? (
+                        <Loader className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4 mr-1" />
+                      )}
                       Reject
                     </button>
                   </div>
@@ -95,6 +111,7 @@ export default function PendingApprovalsTab() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

@@ -15,11 +15,11 @@ exports.login = async (req, res, next) => {
     let role = null;
 
     user = await Admin.findOne({ where: { email: identifier, isActive: true } });
-    if (user) role = 'admin';
+    if (user) role = user.role ;
 
     if (!user) {
       user = await User.findOne({ where: { email: identifier, isActive: true } });
-      if (user) role = 'member';
+      if (user) role = user.role;
     }
 
     if (!user) {
