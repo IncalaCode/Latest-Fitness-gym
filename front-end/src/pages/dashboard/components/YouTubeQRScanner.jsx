@@ -86,7 +86,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
 
     const config = {
       fps: 24,
-      qrbox: { width: 400, height: 500 },
+      qrbox: { width: 500, height: 500 },
       aspectRatio: 1.0,
     };
 
