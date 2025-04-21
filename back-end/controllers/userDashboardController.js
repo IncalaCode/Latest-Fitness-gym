@@ -64,7 +64,7 @@ exports.getDashboardData = async (req, res) => {
     const activePayment = await Payment.findOne({
       where: {
         userId,
-        status: 'completed',
+        paymentstatus: 'completed',
         expiryDate: {
           [Op.gt]: now
         }
@@ -110,26 +110,33 @@ exports.getDashboardData = async (req, res) => {
         await activePayment.save();
       }
     } else {
-      // Check if user has any completed payments in the past
       const completedPaymentsCount = await Payment.count({
         where: {
           userId,
-          status: 'completed'
+          paymentstatus: 'completed'
         }
       });
       
-      // If user is new (no completed payments)
       if (completedPaymentsCount === 0) {
-        // Check for pending in-cash payment
+
         pendingInCashPayment = await Payment.findOne({
           where: {
             userId,
-            status: 'pending',
-            paymentMethod: 'incash',
-            isTemporary: true
+            isTemporary: true,
+            [db.Sequelize.Op.or]: [
+              {
+                paymentstatus: 'approvalPending',
+                paymentMethod: 'online'
+              },
+              {
+                paymentstatus: 'pending',
+                paymentMethod: 'incash'
+              }
+            ]
           },
           order: [['createdAt', 'DESC']]
         });
+
         
         if (pendingInCashPayment) {
           membershipStatus = 'Pending Approval';
@@ -144,7 +151,7 @@ exports.getDashboardData = async (req, res) => {
         const expiredPayment = await Payment.findOne({
           where: {
             userId,
-            status: 'completed'
+            paymentstatus: 'completed'
           },
           order: [['expiryDate', 'DESC']]
         });

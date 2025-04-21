@@ -35,8 +35,6 @@ const usePendingApprovals = () => {
     try {
       setProcessingIds(prev => [...prev, id]);
       const options = await GET_HEADER();
-
-      console.log(Object.fromEntries(options.headers))
       
       await axios.get(
         API_ENDPOINT_FUNCTION(`/approvals/${id}/approve`),

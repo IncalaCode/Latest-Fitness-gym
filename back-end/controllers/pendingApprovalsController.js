@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { User, Payment } = require('../models');
-const {calculateExpiryDate , generateQRData } =  require("./paymentController")
+const {calculateExpiryDate, generateQRData} = require("./paymentController")
 
 exports.getPendingApprovals = async (req, res) => {
   try {
@@ -10,7 +10,16 @@ exports.getPendingApprovals = async (req, res) => {
     const pendingUsers = await Payment.findAll({
       where: {
         isTemporary: true,
-        paymentMethod: "incash",
+        [Op.or]: [
+          {
+            paymentMethod: "incash",
+            paymentstatus: "pending"
+          },
+          {
+            paymentMethod: "online",
+            paymentstatus: "approvalPending"
+          }
+        ],
         updatedAt: {
           [Op.gte]: oneDayAgo
         }
@@ -19,9 +28,10 @@ exports.getPendingApprovals = async (req, res) => {
         'id',
         'planTitle',
         'amount',
-        'status',
+        'paymentstatus',
         'paymentMethod',
         'createdAt',
+        'paymentimage'
       ],
       include: [{
         model: User,
@@ -51,11 +61,18 @@ exports.getPendingApprovals = async (req, res) => {
 
 exports.approveUser = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const paymentRecord = await Payment.findByPk(userId);
-    const user = await User.findByPk(paymentRecord.userId);
-
+    const paymentId = req.params.id;
+    const paymentRecord = await Payment.findByPk(paymentId);
+    
     if (!paymentRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+    
+    const user = await User.findByPk(paymentRecord.userId);
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -69,13 +86,13 @@ exports.approveUser = async (req, res) => {
     paymentRecord.paymentDate = paymentDate;
     paymentRecord.expiryDate = expiryDate;
     paymentRecord.qrCodeData = JSON.stringify(qrData);
-    paymentRecord.status = "completed";
+    paymentRecord.paymentstatus = "completed";
     paymentRecord.isTemporary = false;
     await paymentRecord.save();
 
     res.status(200).json({
       success: true,
-      message: 'User approved successfully',
+      message: 'Payment approved successfully',
     });
   } catch (error) {
     console.error('Error approving user:', error);
@@ -89,22 +106,25 @@ exports.approveUser = async (req, res) => {
 
 exports.rejectUser = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const paymentRecord = await Payment.findByPk(userId);
+    const paymentId = req.params.id;
+    const paymentRecord = await Payment.findByPk(paymentId);
 
     if (!paymentRecord) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Payment record not found'
       });
     }
-    await paymentRecord.destroy();
+    
+    // Update payment status instead of deleting
+    paymentRecord.paymentstatus = "failed";
+    await paymentRecord.save();
 
     res.status(200).json({
       success: true,
-      message: 'User registration rejected',
+      message: 'Payment rejected successfully',
       data: {
-        id: userId
+        id: paymentId
       }
     });
   } catch (error) {
@@ -117,11 +137,6 @@ exports.rejectUser = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get details of a specific pending approval
- * @route   GET /api/admin/pending-approvals/:id
- * @access  Private/Admin
- */
 exports.getPendingApprovalDetails = async (req, res) => {
   try {
     const userId = req.params.id;

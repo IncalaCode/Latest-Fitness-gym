@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSnackbar } from 'notistack';
+import { FiYoutube, FiHash } from 'react-icons/fi';
 import Navbar from '../../components/ui/Navbar';
 import ProfileCard from './components/ProfileCard';
 import CheckInCode from './components/CheckInCode';
 import FitnessStats from './components/FitnessStats';
 import RecentCheckIns from './components/RecentCheckIns';
+import YouTubeQRScanner from './components/YouTubeQRScanner';
+import YouTubeQRGenerator from './components/YouTubeQRGenerator';
 import { API_ENDPOINT_FUNCTION, GET_HEADER } from '../../config/config';
 
 const UserDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -39,6 +44,22 @@ const UserDashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenScanner = () => {
+    setShowScanner(true);
+  };
+
+  const handleCloseScanner = () => {
+    setShowScanner(false);
+  };
+
+  const handleOpenGenerator = () => {
+    setShowGenerator(true);
+  };
+
+  const handleCloseGenerator = () => {
+    setShowGenerator(false);
   };
 
   // Animation variants
@@ -80,21 +101,52 @@ const UserDashboard = () => {
     );
   }
 
-  const { userData, qrCodeData, stats, checkIns, hasPendingInCashPayment } = dashboardData;
+  const { userData, qrCodeData, stats, checkIns, hasPendingInCashPayment, paymentMessage, isRenewal } = dashboardData;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Navbar />
 
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.h1
-          className="text-3xl font-bold mb-8 text-center sm:text-left"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Welcome back, {userData?.fullName || "Member"}
-        </motion.h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <motion.h1
+            className="text-3xl font-bold text-center sm:text-left mb-4 sm:mb-0"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Welcome back, {userData?.fullName || "Member"}
+          </motion.h1>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <motion.button
+              className="flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              onClick={handleOpenScanner}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiYoutube className="mr-2" />
+              Scan Workout Video
+            </motion.button>
+            
+            {/* QR Generator Button - For Testing Only */}
+            <motion.button
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              onClick={handleOpenGenerator}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiHash className="mr-2" />
+              Generate Test QR
+            </motion.button>
+          </div>
+        </div>
 
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -108,6 +160,8 @@ const UserDashboard = () => {
             userData={userData} 
             qrCodeData={qrCodeData}
             hasPendingInCashPayment={hasPendingInCashPayment}
+            paymentMessage={paymentMessage}
+            isRenewal={isRenewal}
             variants={fadeIn} 
           />
           
@@ -116,9 +170,20 @@ const UserDashboard = () => {
           <RecentCheckIns checkIns={checkIns} variants={fadeIn} />
         </motion.div>
       </div>
+      
+      {/* YouTube QR Scanner Modal */}
+      <YouTubeQRScanner 
+        isOpen={showScanner} 
+        onClose={handleCloseScanner} 
+      />
+      
+      {/* YouTube QR Generator Modal - For Testing */}
+      <YouTubeQRGenerator
+        isOpen={showGenerator}
+        onClose={handleCloseGenerator}
+      />
     </div>
   );
 };
 
 export default UserDashboard;
-

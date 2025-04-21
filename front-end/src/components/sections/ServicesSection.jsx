@@ -65,7 +65,8 @@ const ServicesSection = () => {
   const { 
     openPaymentMethodModal, 
     closePaymentModal, 
-    processPayment, 
+    processPayment,
+    uploadPaymentReceipt, 
     showPaymentModal, 
     selectedPlan, 
     isLoading, 
@@ -153,13 +154,40 @@ const ServicesSection = () => {
 
   // Handle payment method selection
   const handleSelectPaymentMethod = async (paymentMethod) => {
-      await processPayment(paymentMethod);
+    try {
+      const paymentData = await processPayment(paymentMethod);
+      
       if (paymentMethod === 'incash') {
         enqueueSnackbar('In-cash payment request submitted successfully', { 
           variant: 'success',
           autoHideDuration: 5000
         });
       }
+      
+      return paymentData;
+    } catch (error) {
+      console.error('Payment error:', error);
+    }
+  };
+
+  // Handle receipt upload
+  const handleUploadReceipt = async (paymentId, receiptFile) => {
+    try {
+      const uploadData = await uploadPaymentReceipt(paymentId, receiptFile);
+      
+      enqueueSnackbar('Receipt uploaded successfully. Waiting for approval.', { 
+        variant: 'success',
+        autoHideDuration: 5000
+      });
+      
+      return uploadData;
+    } catch (error) {
+      console.error('Upload error:', error);
+      enqueueSnackbar('Failed to upload receipt. Please try again.', { 
+        variant: 'error',
+        autoHideDuration: 5000
+      });
+    }
   };
 
   // Animation variants
@@ -227,6 +255,7 @@ const ServicesSection = () => {
           isOpen={showPaymentModal}
           onClose={closePaymentModal}
           onSelectMethod={handleSelectPaymentMethod}
+          onUploadReceipt={handleUploadReceipt}
           selectedPlan={selectedPlan}
           isLoading={isLoading}
         />
