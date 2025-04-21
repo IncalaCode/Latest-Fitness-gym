@@ -27,23 +27,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true
     },
-    chapaTransactionId: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    status: {
-      type: DataTypes.ENUM('pending', 'completed', 'failed', 'cancelled'),
+    paymentstatus: {
+      type: DataTypes.ENUM('pending', "approvalPending",'completed', 'failed', 'cancelled'),
       defaultValue: 'pending'
     },
     paymentMethod: {
       type: DataTypes.STRING,
       allowNull: true
     },
-    redirectUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    checkoutUrl: {
+    paymentimage: {
       type: DataTypes.STRING,
       allowNull: true
     },

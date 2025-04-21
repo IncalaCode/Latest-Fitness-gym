@@ -19,14 +19,14 @@ exports.sendWelcomeEmail = async (user) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <img src="${process.env.WEBSITE_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
+            <img src="${process.env.FRONTEND_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
           </div>
           <h2 style="color: #e53e3e; text-align: center;">Welcome to Latest Fitness!</h2>
           <p>Hello ${user.fullName},</p>
           <p>Thank you for joining Latest Fitness! We're excited to have you as a member of our fitness community.</p>
           <p>Your account has been successfully created and you can now access all our services.</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.WEBSITE_URL}/login" style="background-color: #e53e3e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Your Account</a>
+            <a href="${process.env.FRONTEND_URL}/login" style="background-color: #e53e3e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Your Account</a>
           </div>
           <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
           <p>Best regards,<br>The Latest Fitness Team</p>
@@ -42,7 +42,7 @@ exports.sendWelcomeEmail = async (user) => {
 
 exports.sendPasswordResetEmail = async (user, token) => {
   try {
-    const resetUrl = `${process.env.WEBSITE_URL}/reset-password/${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
     
     const mailOptions = {
       from: `"Latest Fitness" <${process.env.EMAIL_FROM}>`,
@@ -51,7 +51,7 @@ exports.sendPasswordResetEmail = async (user, token) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <img src="${process.env.WEBSITE_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
+            <img src="${process.env.FRONTEND_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
           </div>
           <h2 style="color: #e53e3e; text-align: center;">Password Reset Request</h2>
           <p>Hello ${user.fullName},</p>
@@ -72,15 +72,8 @@ exports.sendPasswordResetEmail = async (user, token) => {
   }
 };
 
-/**
- * Send membership expiration reminder email
- * @param {Object} user - User object with email and fullName
- * @param {Object} membership - Membership object with type and endDate
- * @param {Number} daysRemaining - Number of days until membership expires
- */
 exports.sendMembershipExpirationReminder = async (user, membership, daysRemaining) => {
   try {
-    // Format the end date nicely
     const endDate = new Date(membership.endDate).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -88,19 +81,18 @@ exports.sendMembershipExpirationReminder = async (user, membership, daysRemainin
       day: 'numeric'
     });
 
-    // Determine urgency level for styling
-    let urgencyColor = '#e53e3e'; // Default red
+    let urgencyColor = '#e53e3e'; 
     let urgencyText = 'Urgent: ';
     
     if (daysRemaining > 7) {
-      urgencyColor = '#3182ce'; // Blue for advance notice
+      urgencyColor = '#3182ce'; 
       urgencyText = '';
     } else if (daysRemaining > 3) {
-      urgencyColor = '#dd6b20'; // Orange for moderate urgency
+      urgencyColor = '#dd6b20'; 
       urgencyText = 'Important: ';
     }
 
-    const renewUrl = `${process.env.WEBSITE_URL}/membership/renew/${membership.id}`;
+    const renewUrl = `${process.env.FRONTEND_URL}/package`;
     
     const mailOptions = {
       from: `"Latest Fitness" <${process.env.EMAIL_FROM}>`,
@@ -109,7 +101,7 @@ exports.sendMembershipExpirationReminder = async (user, membership, daysRemainin
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <img src="${process.env.WEBSITE_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
+            <img src="${process.env.FRONTEND_URL}/logo.png" alt="Latest Fitness Logo" style="max-width: 150px;">
           </div>
           <h2 style="color: ${urgencyColor}; text-align: center;">Your Membership is Expiring Soon</h2>
           <p>Hello ${user.fullName},</p>

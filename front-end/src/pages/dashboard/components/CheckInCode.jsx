@@ -4,7 +4,7 @@ import { FiPrinter, FiCheckCircle, FiXCircle, FiAlertTriangle, FiMaximize, FiX }
 import { PrimaryButton } from '../../../components/ui/Buttons';
 import { QRCodeSVG } from 'qrcode.react';
 
-const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }) => {
+const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMessage, isRenewal, variants }) => {
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
   const [qrSize, setQrSize] = useState(240);
   
@@ -13,9 +13,6 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
     const calculateQrSize = () => {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
-      
-      // Calculate maximum size that fits within the screen with padding
-      // Use 80% of the smaller dimension (width or height)
       const maxSize = Math.min(screenWidth * 0.8, screenHeight * 0.5);
       
       // Cap the size at 500px for larger screens
@@ -68,6 +65,17 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
           <FiCheckCircle className="text-green-500 mr-2 text-xl" />
         ) : isPendingApproval ? (
           <FiAlertTriangle className="text-yellow-500 mr-2 text-xl" />
+        ) : isPendingApproval && !hasPendingInCashPayment ? (
+          <>
+            <p className="text-yellow-400 text-sm mb-2">
+              {isRenewal 
+                ? "Your online membership renewal payment is being processed."
+                : "Your online membership payment is being processed."}
+            </p>
+            <p className="text-gray-300 text-xs">
+              Please wait for confirmation. You'll be notified once your payment is approved.
+            </p>
+          </>
         ) : isExpired ? (
           <FiXCircle className="text-red-500 mr-2 text-xl" />
         ) : (
@@ -83,8 +91,8 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
       
       {/* QR Code or Status Message */}
       <div className="flex justify-center items-center mb-6 w-full">
-        {hasActiveMembership || isPendingApproval ? (
-          // Active membership or pending approval - show QR code
+        {hasActiveMembership || (isPendingApproval && hasPendingInCashPayment) ? (
+          // Active membership or pending in-cash payment - show QR code
           <div className={`bg-white p-4 rounded-lg ${isPendingApproval ? 'border-2 border-yellow-500' : ''}`}>
             <QRCodeSVG 
               value={generateQRValue()} 
@@ -96,7 +104,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
             />
           </div>
         ) : (
-          // Expired or inactive membership - show invalid QR with overlay
+          // Expired, inactive, or pending online payment - show invalid QR with overlay
           <div className="relative">
             <div className="bg-white p-4 rounded-lg opacity-30">
               <QRCodeSVG 
@@ -112,6 +120,8 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
               <div className="bg-gray-900 bg-opacity-80 rounded-full p-4">
                 {isExpired ? (
                   <FiXCircle className="text-red-500 text-6xl" />
+                ) : isPendingApproval ? (
+                  <FiAlertTriangle className="text-yellow-500 text-6xl" />
                 ) : (
                   <FiAlertTriangle className="text-yellow-500 text-6xl" />
                 )}
@@ -138,13 +148,15 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
               </div>
             )}
           </>
-        ) : isPendingApproval ? (
+        ) : isPendingApproval && hasPendingInCashPayment ? (
           <>
             <p className="text-yellow-400 text-sm mb-2">
-              Your in-cash payment is pending approval.
+              {isRenewal 
+                ? "Your membership renewal payment is pending approval."
+                : "Your new membership payment is pending approval."}
             </p>
             <p className="text-gray-300 text-xs">
-              Please show this QR code to the staff at reception to confirm your payment.
+              Please show this QR code to the staff at reception to complete the payment process.
             </p>
             {qrCodeData && qrCodeData.dailyCode && (
               <div className="mt-2 bg-gray-700 rounded-lg p-2">
@@ -168,7 +180,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
               Your membership is currently inactive.
             </p>
             <p className="text-gray-400 text-xs">
-              Please contact reception to activate your membership.
+              {paymentMessage || "Please purchase a membership plan to get started."}
             </p>
           </>
         )}
@@ -182,7 +194,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
         >
           <FiPrinter className="mr-2" /> Print QR Code
         </PrimaryButton>
-      ) : isPendingApproval ? (
+      ) : isPendingApproval && hasPendingInCashPayment ? (
         <PrimaryButton 
           colorScheme="yellow" 
           className="w-full max-w-xs flex items-center justify-center"
@@ -190,13 +202,21 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
         >
           <FiMaximize className="mr-2" /> Show to Staff
         </PrimaryButton>
+      ) : isPendingApproval && !hasPendingInCashPayment ? (
+        <PrimaryButton 
+          colorScheme="blueWhite" 
+          className="w-full max-w-xs flex items-center justify-center"
+          disabled
+        >
+          Processing Payment
+        </PrimaryButton>
       ) : (
         <PrimaryButton 
           colorScheme={isExpired ? "redOrange" : "blueWhite"} 
           className="w-full max-w-xs flex items-center justify-center"
           onClick={navigateToRenewMembership} // Function to navigate to the membership renewal page
         >
-          {isExpired ? 'Renew Membership' : 'Join Now'}
+          {isRenewal ? 'Renew Membership' : 'Join Now'}
         </PrimaryButton>
       )}
       </motion.div>
@@ -242,10 +262,12 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, variants }
               <div className="text-center text-white max-w-md px-4">
                 <h2 className="text-2xl font-bold mb-2">Pending Approval</h2>
                 <p className="text-yellow-400 text-lg mb-2">
-                  Your in-cash payment is pending approval.
+                  {isRenewal 
+                    ? "Your membership renewal payment is pending approval."
+                    : "Your new membership payment is pending approval."}
                 </p>
                 <p className="text-gray-300">
-                  Please show this screen to the staff at reception to confirm your payment.
+                  Please show this screen to the staff at reception to complete the payment process.
                 </p>
               </div>
             </div>

@@ -10,7 +10,8 @@ import UserDashboard from './pages/dashboard/UserDashboard';
 import TermsAndConditions from './pages/legal/TermsAndConditions';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from "./Admin/components/AdminDashboard";
-// import Privacy from './pages/legal/PrivacyPolicy';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+// import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 
 function App() {
   return (
@@ -30,18 +31,20 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/package" element={<PackagePage />} />
+          <Route path="/reset-password/:id" element={<ResetPasswordPage />} />
           <Route path="/user-dashboard" element={
             <ProtectedRoute allowed={['Member']}>
               <UserDashboard />
             </ProtectedRoute>
           } />
           
+          
           <Route path="/terms" element={<TermsAndConditions />} />
           <Route path="/admin-dashboard" element={
             <ProtectedRoute allowed={['Admin']}>
                <AdminDashboard />
             </ProtectedRoute>} />
-          {/* <Route path="/privacy" element={<Privacy/>} /> */}
+          {/* <Route path="/privacy" element={<PrivacyPolicy/>} /> */}
           
         </Routes>
       </Router>
