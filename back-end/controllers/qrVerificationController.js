@@ -9,9 +9,10 @@ const crypto = require('crypto');
 exports.verifyQRCode = async (req, res) => {
   try {
     const qrData = JSON.parse(req.body.qrData);
+    qrData.scanned = true;
     
     // Basic validation
-    if (!qrData || !qrData.paymentId || !qrData.userId || !qrData.signature) {
+    if (!qrData || !qrData.paymentId || !qrData.userId) {
       return res.status(400).json({
         success: false,
         message: 'Invalid QR code data'
@@ -48,33 +49,6 @@ exports.verifyQRCode = async (req, res) => {
       });
     }
 
-    // Verify QR code signature
-    const verifySignature = (data, signature) => {
-      // Create a string from the data to hash
-      const dataString = `${data.paymentId}${data.userId}${data.dailyCode}${data.validForDate}`;
-      // Create hash
-      const hash = crypto.createHash('sha256').update(dataString).digest('hex');
-      // Compare with provided signature
-      return hash === signature;
-    };
-
-    if (!verifySignature(qrData, qrData.signature)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid QR code signature'
-      });
-    }
-
-    // Verify QR code is not expired (valid only for the current date)
-    const today = new Date().toISOString().split('T')[0];
-    if (qrData.validForDate !== today) {
-      return res.status(400).json({
-        success: false,
-        message: 'QR code has expired',
-        validForDate: qrData.validForDate,
-        currentDate: today
-      });
-    }
 
     // Process based on QR code type
     if (qrData.isTemporary && qrData.status === 'pending') {
@@ -82,25 +56,15 @@ exports.verifyQRCode = async (req, res) => {
       
       // Verify payment is still pending
       if (payment.paymentstatus !== 'pending' && payment.paymentstatus !== 'approvalPending') {
+        // If payment is completed, proceed to check-in
+        if (payment.paymentstatus === 'completed') {
+          return await handleCheckIn(req, res, user, payment, qrData);
+        }
+        
         return res.status(400).json({
           success: false,
-          message: `Payment is already ${payment.paymentstatus}`
-        });
-      }
-
-      // Verify payment is temporary
-      if (!payment.isTemporary) {
-        return res.status(400).json({
-          success: false,
-          message: 'Payment is not marked as temporary'
-        });
-      }
-
-      // Verify QR data matches payment record
-      if (payment.planTitle !== qrData.planTitle) {
-        return res.status(400).json({
-          success: false,
-          message: 'QR code data does not match payment record'
+          message: `Payment is already ${payment.paymentstatus}`,
+          qrData: qrData
         });
       }
 
@@ -118,83 +82,19 @@ exports.verifyQRCode = async (req, res) => {
             createdAt: payment.createdAt
           },
           user: user
-        }
+        },
+        qrData: qrData
       });
       
     } else if (!qrData.isTemporary && qrData.status === 'active') {
       // HANDLE CHECK-IN FOR ACTIVE MEMBERSHIP
-      
-      // Verify payment is completed
-      if (payment.paymentstatus !== 'completed') {
-        return res.status(400).json({
-          success: false,
-          message: 'Membership is not active',
-          status: payment.paymentstatus
-        });
-      }
-
-      // Check if membership has expired
-      if (payment.expiryDate && new Date(payment.expiryDate) < new Date()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Membership has expired',
-          expiryDate: payment.expiryDate
-        });
-      }
-
-      // Check if user has already checked in today
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const todayCheckIn = await CheckIn.findOne({
-        where: {
-          userId: payment.userId,
-          checkInTime: {
-            [Op.between]: [startOfDay, endOfDay]
-          }
-        }
-      });
-
-      if (todayCheckIn) {
-        return res.status(400).json({
-          success: false,
-          message: 'User has already checked in today',
-          data: {
-            checkIn: todayCheckIn,
-            checkInTime: todayCheckIn.checkInTime
-          }
-        });
-      }
-
-      // Create new check-in record
-      const newCheckIn = await CheckIn.create({
-        userId: payment.userId,
-        checkInTime: new Date(),
-        verificationMethod: 'qr_code',
-        area: 'Main Gym', // Default area
-        notes: `Check-in via QR code for ${payment.planTitle} membership`
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: 'Check-in successful',
-        data: {
-          checkIn: newCheckIn,
-          user: user,
-          membership: {
-            planTitle: payment.planTitle,
-            expiryDate: payment.expiryDate
-          }
-        }
-      });
+      return await handleCheckIn(req, res, user, payment, qrData);
     } else {
       // If QR code doesn't match expected types
       return res.status(400).json({
         success: false,
-        message: 'Invalid QR code type'
+        message: 'Invalid QR code type',
+        qrData: qrData
       });
     }
     
@@ -207,3 +107,80 @@ exports.verifyQRCode = async (req, res) => {
     });
   }
 };
+
+
+async function handleCheckIn(req, res, user, payment, qrData) {
+  // Verify payment is completed
+  if (payment.paymentstatus !== 'completed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Membership is not active',
+      status: payment.paymentstatus,
+      qrData: qrData
+    });
+  }
+
+  // Check if membership has expired
+  if (payment.expiryDate && new Date(payment.expiryDate) < new Date()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Membership has expired',
+      expiryDate: payment.expiryDate,
+      qrData: qrData
+    });
+  }
+
+  // Check if user has already checked in today
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  const todayCheckIn = await CheckIn.findOne({
+    where: {
+      userId: payment.userId,
+      checkInTime: {
+        [Op.between]: [startOfDay, endOfDay]
+      }
+    }
+  });
+
+  if (todayCheckIn) {
+    return res.status(400).json({
+      success: false,
+      message: 'User has already checked in today',
+      data: {
+        checkIn: todayCheckIn,
+        checkInTime: todayCheckIn.checkInTime
+      },
+      qrData: qrData
+    });
+  }
+
+  // Create new check-in record
+  const newCheckIn = await CheckIn.create({
+    userId: payment.userId,
+    checkInTime: new Date(),
+    verificationMethod: 'qr_code',
+    area: 'Main Gym', // Default area
+    notes: `Check-in via QR code for ${payment.planTitle} membership`
+  });
+
+  payment.qrCodeData = JSON.stringify(qrData) 
+  await payment.save()
+
+  return res.status(201).json({
+    success: true,
+    message: 'Check-in successful',
+    data: {
+      checkIn: newCheckIn,
+      user: user,
+      membership: {
+        planTitle: payment.planTitle,
+        expiryDate: payment.expiryDate
+      }
+    },
+    qrData: qrData
+  });
+}

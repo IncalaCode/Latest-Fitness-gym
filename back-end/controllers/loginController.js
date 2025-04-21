@@ -39,14 +39,14 @@ exports.login = async (req, res, next) => {
 };
 
 const sendLoginResponse = (res, user, role) => {
-  const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+  const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION  });
 
   const responseData = {
     success: true,
     message: 'Login successful',
     user: {
       id: user.id,
-      fullName: role === 'admin' ? `${user.firstName} ${user.lastName}` : user.fullName,
+      fullName: role === 'Admin' ? `${user.firstName} ${user.lastName}` : user.fullName,
       email: user.email,
       role,
       photoUrl: user.photoUrl

@@ -11,6 +11,9 @@ import TermsAndConditions from './pages/legal/TermsAndConditions';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from "./Admin/components/AdminDashboard";
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import MembersTab from './Admin/components/tabs/MembersTab';
+import PendingApprovalsTab from './Admin/components/tabs/PendingApprovalsTab';
+import ExpiringMembershipsTab from './Admin/components/tabs/ExpiringMembershipsTab';
 // import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 
 function App() {
@@ -24,7 +27,6 @@ function App() {
       autoHideDuration={5000}
     >
       <Router>
-        
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -38,14 +40,44 @@ function App() {
             </ProtectedRoute>
           } />
           
-          
           <Route path="/terms" element={<TermsAndConditions />} />
+          
+          {/* Admin routes */}
           <Route path="/admin-dashboard" element={
             <ProtectedRoute allowed={['Admin']}>
-               <AdminDashboard />
-            </ProtectedRoute>} />
-          {/* <Route path="/privacy" element={<PrivacyPolicy/>} /> */}
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/check-ins" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
           
+          {/* Admin tab routes */}
+          <Route path="/admin/members" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/pending-approvals" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/expiring-memberships" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/profile" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* <Route path="/privacy" element={<PrivacyPolicy/>} /> */}
         </Routes>
       </Router>
     </SnackbarProvider>

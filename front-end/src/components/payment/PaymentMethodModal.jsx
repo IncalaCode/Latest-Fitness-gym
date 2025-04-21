@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PrimaryButton } from '../ui/Buttons';
+import { PrimaryButton, SecondaryButton } from '../ui/Buttons';
 import { FaCopy, FaCheckCircle } from 'react-icons/fa';
 import { BsBank } from 'react-icons/bs';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 
 // Payment method images
 import chapaLogo from '/home/payment/chapa.png';
@@ -84,10 +89,28 @@ const PaymentMethodModal = ({
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingMethodId, setPendingMethodId] = useState(null);
 
-  // Move function definitions inside the component body
-  const handleMethodSelect = async (methodId) => {
+  // Function to open confirmation dialog
+  const openConfirmationDialog = (methodId) => {
+    setPendingMethodId(methodId);
+    setConfirmDialogOpen(true);
+  };
+
+  // Function to close confirmation dialog
+  const closeConfirmationDialog = () => {
+    setConfirmDialogOpen(false);
+    setPendingMethodId(null);
+  };
+
+  // Function to proceed with payment method after confirmation
+  const confirmPaymentMethod = async () => {
+    if (!pendingMethodId) return;
+    
+    const methodId = pendingMethodId;
     setSelectedMethod(methodId);
+    closeConfirmationDialog();
     
     if (methodId === 'incash') {
       // For cash payments, just process normally
@@ -140,7 +163,7 @@ const PaymentMethodModal = ({
   const paymentMethods = [
     {
       id: 'online',
-      name: 'Pay Online with Chapa',
+      name: 'Pay Online ',
       description: 'Secure online payment with credit/debit card or mobile money',
       image: chapaLogo,
       imageAlt: 'Chapa Payment Gateway Logo'
@@ -154,9 +177,17 @@ const PaymentMethodModal = ({
     }
   ];
 
+  // Get the name of the pending payment method for the confirmation dialog
+  const getPendingMethodName = () => {
+    if (!pendingMethodId) return '';
+    const method = paymentMethods.find(m => m.id === pendingMethodId);
+    return method ? method.name : '';
+  };
+
   return (
-    <AnimatePresence>
-      <motion.div
+    <>
+      <AnimatePresence>
+        <motion.div
         className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto"
         variants={backdropVariants}
         initial="hidden"
@@ -204,7 +235,7 @@ const PaymentMethodModal = ({
                     key={method.id}
                     className="bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => !isLoading && handleMethodSelect(method.id)}
+                    onClick={() => !isLoading && openConfirmationDialog(method.id)}
                   >
                   <div className="flex items-center">
                     <div className="w-16 h-16 flex items-center justify-center bg-gray-900 rounded-lg p-2 mr-4">
@@ -328,7 +359,40 @@ const PaymentMethodModal = ({
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+      </AnimatePresence>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={closeConfirmationDialog}
+        aria-labelledby="payment-confirmation-dialog-title"
+        aria-describedby="payment-confirmation-dialog-description"
+        PaperProps={{
+          style: {
+            backgroundColor: 'black',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+          },
+        }}
+      >
+        <DialogTitle id="payment-confirmation-dialog-title" className="text-center font-bold text-white">
+          {"Confirm Payment Method"}
+        </DialogTitle>
+        <DialogContent>
+        <DialogTitle id="payment-confirmation-dialog-title" className="text-center font-bold text-white">
+          {`Are you sure you want to continue with ${getPendingMethodName()} ?`}
+        </DialogTitle>
+        </DialogContent>
+        <DialogActions className="flex justify-center pb-4 px-6 gap-4">
+          <SecondaryButton onClick={closeConfirmationDialog} className="px-6">
+            Cancel
+          </SecondaryButton>
+          <PrimaryButton onClick={confirmPaymentMethod} colorScheme="redOrange" className="px-6">
+            Continue
+          </PrimaryButton>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

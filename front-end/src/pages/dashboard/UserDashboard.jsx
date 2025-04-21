@@ -8,14 +8,12 @@ import CheckInCode from './components/CheckInCode';
 import FitnessStats from './components/FitnessStats';
 import RecentCheckIns from './components/RecentCheckIns';
 import YouTubeQRScanner from './components/YouTubeQRScanner';
-import YouTubeQRGenerator from './components/YouTubeQRGenerator';
 import { API_ENDPOINT_FUNCTION, GET_HEADER } from '../../config/config';
 
 const UserDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
-  const [showGenerator, setShowGenerator] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -54,13 +52,8 @@ const UserDashboard = () => {
     setShowScanner(false);
   };
 
-  const handleOpenGenerator = () => {
-    setShowGenerator(true);
-  };
 
-  const handleCloseGenerator = () => {
-    setShowGenerator(false);
-  };
+
 
   // Animation variants
   const fadeIn = {
@@ -84,7 +77,7 @@ const UserDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-red-500"></div>
       </div>
     );
@@ -132,19 +125,6 @@ const UserDashboard = () => {
               Scan Workout Video
             </motion.button>
             
-            {/* QR Generator Button - For Testing Only */}
-            <motion.button
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              onClick={handleOpenGenerator}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiHash className="mr-2" />
-              Generate Test QR
-            </motion.button>
           </div>
         </div>
 
@@ -154,20 +134,33 @@ const UserDashboard = () => {
           initial="hidden"
           animate="visible"
         >
-          <ProfileCard fetchDashboardData={fetchDashboardData} userData={userData} variants={fadeIn} />
+          {/* Mobile-first order: CheckInCode first, then ProfileCard */}
+          <div className="md:order-2 order-1">
+            <CheckInCode 
+              userData={userData} 
+              qrCodeData={qrCodeData}
+              hasPendingInCashPayment={hasPendingInCashPayment}
+              paymentMessage={paymentMessage}
+              isRenewal={isRenewal}
+              variants={fadeIn} 
+            />
+          </div>
           
-          <CheckInCode 
-            userData={userData} 
-            qrCodeData={qrCodeData}
-            hasPendingInCashPayment={hasPendingInCashPayment}
-            paymentMessage={paymentMessage}
-            isRenewal={isRenewal}
-            variants={fadeIn} 
-          />
+          <div className="md:order-1 order-2">
+            <ProfileCard 
+              fetchDashboardData={fetchDashboardData} 
+              userData={userData} 
+              variants={fadeIn} 
+            />
+          </div>
           
-          <FitnessStats stats={stats} variants={fadeIn} />
+          <div className="md:order-3 order-3">
+            <FitnessStats stats={stats} variants={fadeIn} />
+          </div>
           
-          <RecentCheckIns checkIns={checkIns} variants={fadeIn} />
+          <div className="md:order-4 order-4">
+            <RecentCheckIns checkIns={checkIns} variants={fadeIn} />
+          </div>
         </motion.div>
       </div>
       
@@ -177,11 +170,7 @@ const UserDashboard = () => {
         onClose={handleCloseScanner} 
       />
       
-      {/* YouTube QR Generator Modal - For Testing */}
-      <YouTubeQRGenerator
-        isOpen={showGenerator}
-        onClose={handleCloseGenerator}
-      />
+
     </div>
   );
 };
