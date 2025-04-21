@@ -30,7 +30,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     if (isOpen) {
       setVideoUrl(null);
       setEmbedUrl(null);
-      setVideoTitle('YouTube Video');
+      setVideoTitle('Video');
       setError(null);
       setCameraError(false);
       setShowImageUpload(false);
@@ -85,8 +85,8 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     setEmbedUrl(null);
 
     const config = {
-      fps: 10,
-      qrbox: { width: 300, height: 300 },
+      fps: 24,
+      qrbox: { width: 400, height: 500 },
       aspectRatio: 1.0,
     };
 
@@ -279,7 +279,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
 
           <div className="bg-gray-800 rounded-xl p-6 w-full max-w-xl">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <FiYoutube className="mr-2 text-red-500" /> YouTube QR Scanner
+              <FiYoutube className="mr-2 text-red-500" /> QR Scanner
             </h2>
 
             {!videoUrl ? (

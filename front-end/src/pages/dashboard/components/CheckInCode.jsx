@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPrinter, FiCheckCircle, FiXCircle, FiAlertTriangle, FiMaximize, FiX } from 'react-icons/fi';
+import { FiPrinter, FiCheckCircle, FiXCircle, FiAlertTriangle, FiMaximize, FiX, FiClock } from 'react-icons/fi';
 import { PrimaryButton } from '../../../components/ui/Buttons';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -34,6 +34,8 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
   const hasActiveMembership = userData?.membershipStatus === 'Active';
   const isPendingApproval = userData?.membershipStatus === 'Pending Approval';
   const isExpired = userData?.membershipStatus === 'Expired';
+  const isQrCodeBlurred = qrCodeData?.scanned === true;
+  
   const generateQRValue = () => {
     if (qrCodeData) {
       return JSON.stringify(qrCodeData);
@@ -81,7 +83,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
         ) : (
           <FiAlertTriangle className="text-yellow-500 mr-2 text-xl" />
         )}
-        <h2 className="text-xl font-bold">
+        <h2 className="text-xl font-bold text-white">
           {hasActiveMembership ? 'Check-In Code' : 
            isPendingApproval ? 'Pending Approval' : 
            isExpired ? 'Membership Expired' : 
@@ -93,15 +95,28 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
       <div className="flex justify-center items-center mb-6 w-full">
         {hasActiveMembership || (isPendingApproval && hasPendingInCashPayment) ? (
           // Active membership or pending in-cash payment - show QR code
-          <div className={`bg-white p-4 rounded-lg ${isPendingApproval ? 'border-2 border-yellow-500' : ''}`}>
-            <QRCodeSVG 
-              value={generateQRValue()} 
-              size={240} 
-              level="H"
-              bgColor="#FFFFFF"
-              fgColor="#000000"
-              includeMargin={true}
-            />
+          <div className="relative">
+            <div className={`bg-white p-4 rounded-lg ${isPendingApproval ? 'border-2 border-yellow-500' : ''}`}>
+              <QRCodeSVG 
+                value={generateQRValue()} 
+                size={240} 
+                level="H"
+                bgColor="#FFFFFF"
+                fgColor="#000000"
+                includeMargin={true}
+              />
+            </div>
+            
+            {/* Blur overlay for scanned QR codes */}
+            {isQrCodeBlurred && (
+              <div className="absolute inset-0 backdrop-blur-lg flex flex-col items-center justify-center p-4 rounded-lg">
+                <FiClock className="text-yellow-400 text-4xl mb-2" />
+                <p className="text-white text-center font-medium mb-1">Check-in Complete</p>
+                <p className="text-gray-300 text-sm text-center mb-3">
+                  See you next day!
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           // Expired, inactive, or pending online payment - show invalid QR with overlay
@@ -135,13 +150,19 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
       <div className="text-center mb-8 w-full max-w-xs">
         {hasActiveMembership ? (
           <>
-            <p className="text-gray-300 text-sm mb-2">
-              Scan this code at the reception to check in.
-            </p>
+            {isQrCodeBlurred ? (
+              <p className="text-yellow-400 text-sm mb-2">
+                You've already checked in today.
+              </p>
+            ) : (
+              <p className="text-gray-300 text-sm mb-2">
+                Scan this code at the reception to check in.
+              </p>
+            )}
             <p className="text-gray-400 text-xs">
               Your QR code refreshes every 24 hours for security.
             </p>
-            {qrCodeData && qrCodeData.dailyCode && (
+            {qrCodeData && qrCodeData.dailyCode && !isQrCodeBlurred && (
               <div className="mt-2 bg-gray-700 rounded-lg p-2">
                 <p className="text-gray-400 text-xs mb-1">Today's verification code:</p>
                 <p className="text-white font-mono font-bold tracking-wider">{qrCodeData.dailyCode}</p>
@@ -191,8 +212,9 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
         <PrimaryButton 
           colorScheme="redOrange" 
           className="w-full max-w-xs flex items-center justify-center"
+          disabled={isQrCodeBlurred}
         >
-          <FiPrinter className="mr-2" /> Print QR Code
+        see u next day
         </PrimaryButton>
       ) : isPendingApproval && hasPendingInCashPayment ? (
         <PrimaryButton 
@@ -241,7 +263,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
             </div>
             
             <div className="flex flex-col items-center max-w-full">
-              <div className="bg-white p-4 rounded-lg mb-6 border-4 border-yellow-500 max-w-full">
+              <div className="relative bg-white p-4 rounded-lg mb-6 border-4 border-yellow-500 max-w-full">
                 <QRCodeSVG 
                   value={generateQRValue()} 
                   size={qrSize} 
@@ -250,9 +272,20 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
                   fgColor="#000000"
                   includeMargin={true}
                 />
+                
+                {/* Blur overlay for scanned QR codes in fullscreen mode */}
+                {isQrCodeBlurred && (
+                  <div className="absolute inset-0 backdrop-blur-lg flex flex-col items-center justify-center p-4 rounded-lg">
+                    <FiClock className="text-yellow-400 text-6xl mb-3" />
+                    <p className="text-white text-center font-medium text-xl mb-2">Check-in Complete</p>
+                    <p className="text-gray-300 text-center text-lg mb-4">
+                      See you next day!
+                    </p>
+                  </div>
+                )}
               </div>
               
-              {qrCodeData && qrCodeData.dailyCode && (
+              {qrCodeData && qrCodeData.dailyCode && !isQrCodeBlurred && (
                 <div className="bg-gray-800 rounded-lg p-4 text-center mb-6 w-full max-w-md">
                   <p className="text-gray-400 text-sm mb-1">Verification code:</p>
                   <p className="text-white font-mono font-bold tracking-wider text-3xl">{qrCodeData.dailyCode}</p>
