@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const db = require('../models');
 const { Admin, User } = db;
 
-const crypto = require('crypto');
 
 const verifyPassword = (password, hashedPassword, salt) => {
   const hash = crypto
@@ -36,11 +35,14 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
+    
 
-    const isPasswordValid = await verifyPassword(password, user.password , process.env.SALT);
+    const isPasswordValid = await verifyPassword(password, user.password , "10");
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: 'Invalid password' });
     }
+    
+    
 
     return sendLoginResponse(res, user, role);
   } catch (error) {

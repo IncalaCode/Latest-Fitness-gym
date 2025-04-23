@@ -1,8 +1,7 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const crypto = require('crypto');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -66,8 +65,11 @@ exports.register = async (req, res) => {
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = process.env.SALT
+    
+    const hashedPassword = crypto
+      .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
+      .toString('hex');
 
     const user = await User.create({
       fullName,
@@ -163,10 +165,13 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = process.env.SALT
+    const hashedPassword = crypto
+      .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
+      .toString('hex');
 
     user.password = hashedPassword;
+    user.salt = salt;
     user.forgetPasswordToken = null;
     user.forgetPasswordExpires = null;
     await user.save();
@@ -242,8 +247,11 @@ exports.updateUser = async (req, res) => {
     }
     
     if (req.body.password) {
-      const salt = await bcrypt.genSalt(10);
-      req.body.password = await bcrypt.hash(req.body.password, salt);
+      const salt = process.env.SALT 
+      req.body.password = crypto
+        .pbkdf2Sync(req.body.password, salt, 1000, 64, 'sha512')
+        .toString('hex');
+      req.body.salt = salt;
     }
     
     if (req.file) {
