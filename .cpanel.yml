@@ -13,5 +13,5 @@ deployment:
     - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/api/
-    - source /home/latestfi/nodevenv/api/20/bin/activate && cd $DEPLOYPATH && npm install --production && npm run start
+    - source /home/latestfi/nodevenv/latestfitnessethiopia.com/20/bin/activate && cd $DEPLOYPATH && npm install --production && npm run start
     - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
