@@ -26,10 +26,10 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
 
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    // if (!isPasswordValid) {
-    //   return res.status(400).json({ success: false, message: 'Invalid password' });
-    // }
+    const isPasswordValid = await bcrypt.compare(password, user?.password || '');
+    if (!isPasswordValid) {
+      return res.status(400).json({ success: false, message: 'Invalid password' });
+    }
 
     return sendLoginResponse(res, user, role);
   } catch (error) {
