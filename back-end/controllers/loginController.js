@@ -26,15 +26,6 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
 
-    let isPasswordValid = false;
-    try {
-      isPasswordValid = await bcrypt.compare(password, user?.password || '');
-      console.log('✅ Password match:', isPasswordValid);
-    } catch (err) {
-      console.error('❌ bcrypt.compare() error:', err);
-      return res.status(500).json({ success: false, message: 'Internal bcrypt error' });
-    }
-
     return sendLoginResponse(res, user, role);
   } catch (error) {
     console.error('Login error:', error);
