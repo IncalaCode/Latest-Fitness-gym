@@ -1,18 +1,16 @@
----
-deployment:
-  tasks:
-    - export DEPLOYPATH=/home/latestfi/public_html
-    - export REPOPATH=/home/latestfi/cprepo
-    - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
-    - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH
-    - /bin/mkdir -p $DEPLOYPATH/api
-    - /bin/cp $REPOPATH/back-end/server.js $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/config $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/middleware $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/mi $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/utils $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/models $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/api/
-    - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/api/
-    - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/api/
-    - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
+tasks:
+  - export DEPLOYPATH=/home/latestfi/api
+  - export REPOPATH=/home/latestfi/cprepo
+  - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
+  - /bin/mkdir -p $DEPLOYPATH
+  - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH/
+  - /bin/cp $REPOPATH/back-end/server.js $DEPLOYPATH/
+  - /bin/cp -R $REPOPATH/back-end/config $DEPLOYPATH/
+  - /bin/cp -R $REPOPATH/back-end/routes $DEPLOYPATH/
+  - /bin/cp -R $REPOPATH/back-end/utils $DEPLOYPATH/
+  - /bin/cp -R $REPOPATH/back-end/models $DEPLOYPATH/
+  - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/
+  - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/
+  - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/
+  - source /home/latestfi/nodevenv/api/20/bin/activate && cd $DEPLOYPATH && npm install --production
+  - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
