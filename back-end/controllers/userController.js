@@ -85,7 +85,7 @@ exports.register = async (req, res) => {
       agreeToTerms
     });
 
-    await sendWelcomeEmail(user);
+    // await sendWelcomeEmail(user);
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
