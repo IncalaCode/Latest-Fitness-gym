@@ -3,7 +3,7 @@ deployment:
     - export DEPLOYPATH=/home/latestfi/public_html
     - export REPOPATH=/home/latestfi/cprepo
     - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
-    - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH
+    - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH/api/
     - /bin/mkdir -p $DEPLOYPATH/api
     - /bin/cp $REPOPATH/back-end/server.js $DEPLOYPATH/api/
     - /bin/cp -R $REPOPATH/back-end/config $DEPLOYPATH/api/
