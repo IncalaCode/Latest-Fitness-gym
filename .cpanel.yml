@@ -11,6 +11,7 @@ deployment:
     - /bin/cp -R $REPOPATH/back-end/routes $DEPLOYPATH/api/
     - /bin/cp -R $REPOPATH/back-end/utils $DEPLOYPATH/api/
     - /bin/cp -R $REPOPATH/back-end/models $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/seeder $DEPLOYPATH/api/
     - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/api/
