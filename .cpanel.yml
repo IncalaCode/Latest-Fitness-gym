@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/public_html/
+    - export DEPLOYPATH=/public_html
     - export REPOPATH=/cprepo
     - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
     - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH
