@@ -1,0 +1,16 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/latestfi/public_html/
+    - /bin/cp -R back-end/dist/* $DEPLOYPATH
+    - /bin/cp -R back-end/uploads $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/cp back-end/server.js $DEPLOYPATH/api/
+    - /bin/cp -R back-end/config $DEPLOYPATH/api/
+    - /bin/cp -R back-end/routes $DEPLOYPATH/api/
+    - /bin/cp -R back-end/utils $DEPLOYPATH/api/
+    - /bin/cp -R back-end/models $DEPLOYPATH/api/
+    - /bin/cp -R back-end/controllers $DEPLOYPATH/api/
+    - /bin/cp back-end/package.json $DEPLOYPATH/api/
+    - /bin/cp back-end/.env $DEPLOYPATH/api/
+    - cd $DEPLOYPATH/api && npm install --production
