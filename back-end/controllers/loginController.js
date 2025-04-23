@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt'); // native bcrypt
+  const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
 const { Admin, User } = db;
@@ -15,7 +15,7 @@ exports.login = async (req, res, next) => {
     let role = null;
 
     user = await Admin.findOne({ where: { email: identifier, isActive: true } });
-    if (user) role = user.role;
+    if (user) role = user.role ;
 
     if (!user) {
       user = await User.findOne({ where: { email: identifier, isActive: true } });
@@ -39,9 +39,7 @@ exports.login = async (req, res, next) => {
 };
 
 const sendLoginResponse = (res, user, role) => {
-  const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRATION
-  });
+  const token = jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION  });
 
   const responseData = {
     success: true,
@@ -93,9 +91,7 @@ exports.token_refresh = async (req, res) => {
       });
     }
 
-    const newToken = jwt.sign({ id: user.id, role: decoded.role }, process.env.JWT_SECRET, {
-      expiresIn: "1d"
-    });
+    const newToken = jwt.sign({ id: user.id, role: decoded.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     return res.status(200).json({
       success: true,
