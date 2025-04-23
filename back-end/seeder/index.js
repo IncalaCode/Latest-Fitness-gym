@@ -17,7 +17,7 @@ async function seedAdmins() {
       },
     ];
 
-    await Admin.bulkCreate(admins, { ignoreDuplicates: true });
+    await Admin.bulkCreate(admins);
     console.log('✅ Admin seed completed.');
     process.exit(0);
   } catch (err) {
