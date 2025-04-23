@@ -1,17 +1,7 @@
-const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
 const { Admin, User } = db;
-
-
-const verifyPassword = (password, hashedPassword, salt) => {
-  const hash = crypto
-    .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
-    .toString('hex');
-  
-  return hash === hashedPassword;
-};
-
 
 exports.login = async (req, res, next) => {
   try {
@@ -25,7 +15,7 @@ exports.login = async (req, res, next) => {
     let role = null;
 
     user = await Admin.findOne({ where: { email: identifier, isActive: true } });
-    if (user) role = user.role;
+    if (user) role = user.role ;
 
     if (!user) {
       user = await User.findOne({ where: { email: identifier, isActive: true } });
@@ -35,14 +25,11 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
-    
 
-    const isPasswordValid = await verifyPassword(password, user.password , "10");
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: 'Invalid password' });
     }
-    
-    
 
     return sendLoginResponse(res, user, role);
   } catch (error) {
