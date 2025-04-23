@@ -1,7 +1,7 @@
 {
-  "name": "student-management-system-backend",
+  "name": "gym-backend",
   "version": "1.0.0",
-  "description": "Backend API for Student Management System",
+  "description": "Backend API for gym",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
