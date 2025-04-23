@@ -3,16 +3,16 @@ const jwt = require('jsonwebtoken');
 const db = require('../models');
 const { Admin, User } = db;
 
-const verifyPassword = (password, stored) =>
-  new Promise((resolve, reject) => {
-    const [salt, key] = stored.split(':');
-    if (!salt || !key) return resolve(false);
-    
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) return reject(err);
-      resolve(derivedKey.toString('hex') === key);
-    });
-  });
+const crypto = require('crypto');
+
+const verifyPassword = (password, hashedPassword, salt) => {
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
+    .toString('hex');
+  
+  return hash === hashedPassword;
+};
+
 
 exports.login = async (req, res, next) => {
   try {
@@ -37,7 +37,7 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
 
-    const isPasswordValid = await verifyPassword(password, user.password || '');
+    const isPasswordValid = await verifyPassword(password, user.password , process.env.SALT);
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: 'Invalid password' });
     }
