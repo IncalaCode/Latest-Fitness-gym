@@ -6,7 +6,6 @@ require('dotenv').config();
 
 exports.login = async (req, res, next) => {
   try {
-    return res.status(200).json({ success: true, message: 'Login successful' });
     const { identifier, password } = req.body;
 
     if (!identifier || !password) {
@@ -24,6 +23,7 @@ exports.login = async (req, res, next) => {
       if (user) role = user.role;
     }
 
+    return res.status(400).json({ success: false, message:  user});
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
