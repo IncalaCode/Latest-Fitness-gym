@@ -32,28 +32,13 @@ app.get('*', (req, res) => {
 app.use('/api', routes);
 
 app.use((err, req, res, next) => {
-  console.error('🔥 Server error:', err);
-
-  // Default to 500
-  let statusCode = err.statusCode || 500;
-
-  // If error stack mentions bcrypt, or a custom property is set, treat as 503
-  const isBcryptError = err.message?.toLowerCase().includes('bcrypt') || err.source === 'bcrypt';
-
-  if (isBcryptError || err.code === 'RESOURCE_LIMIT') {
-    statusCode = 503;
-  }
-
+  console.error('Server error:', err);
+  const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
-    success: false,
-    message:
-      statusCode === 503
-        ? 'Service temporarily unavailable. Please try again later.'
-        : err.message || 'Internal Server Error',
+    message: err.message || 'Internal Server Error',
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
-
 
 const startServer = async () => {
   try {

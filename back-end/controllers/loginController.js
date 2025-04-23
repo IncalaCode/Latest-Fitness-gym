@@ -1,7 +1,18 @@
-  const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
 const { Admin, User } = db;
+
+const verifyPassword = (password, stored) =>
+  new Promise((resolve, reject) => {
+    const [salt, key] = stored.split(':');
+    if (!salt || !key) return resolve(false);
+    
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) return reject(err);
+      resolve(derivedKey.toString('hex') === key);
+    });
+  });
 
 exports.login = async (req, res, next) => {
   try {
@@ -15,7 +26,7 @@ exports.login = async (req, res, next) => {
     let role = null;
 
     user = await Admin.findOne({ where: { email: identifier, isActive: true } });
-    if (user) role = user.role ;
+    if (user) role = user.role;
 
     if (!user) {
       user = await User.findOne({ where: { email: identifier, isActive: true } });
@@ -26,15 +37,10 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
 
-    try {
-      isPasswordValid = await bcrypt.compare(password, user?.password || '');
-    } catch (bcryptError) {
-      const error = new Error('Password verification failed');
-      error.statusCode = 503;
-      error.source = 'bcrypt';
-      return next(error);
+    const isPasswordValid = await verifyPassword(password, user.password || '');
+    if (!isPasswordValid) {
+      return res.status(400).json({ success: false, message: 'Invalid password' });
     }
-    
 
     return sendLoginResponse(res, user, role);
   } catch (error) {
