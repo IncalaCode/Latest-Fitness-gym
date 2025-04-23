@@ -2,7 +2,7 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/latestfi/public_html/
-    - export REPOPATH=/home/latestfi/public_html/repositories/Latest-Fitness-gym/back-end
+    - export REPOPATH=/home/latestfi/repositories/Latest-Fitness-gym/back-end
     - /bin/cp -R $REPOPATH/dist/* $DEPLOYPATH
     - /bin/cp -R $REPOPATH/uploads $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/api
