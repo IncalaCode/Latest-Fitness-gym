@@ -15,5 +15,5 @@ deployment:
     - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/api/
     - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/api/
-    - cd $DEPLOYPATH/api && npm install --production
+    - cd $DEPLOYPATH/api && npm install --production && npm run start
     - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
