@@ -2,16 +2,17 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/latestfi/public_html/
-    - export REPOPATH=/home/latestfi/repositories/Latest-Fitness-gym/back-end
-    - /bin/cp -R $REPOPATH/dist/* $DEPLOYPATH
-    - /bin/cp -R $REPOPATH/uploads $DEPLOYPATH
+    - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
+    - /bin/cp -R back-end/dist/* $DEPLOYPATH
+    - /bin/cp -R back-end/uploads $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/api
-    - /bin/cp $REPOPATH/server.js $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/config $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/routes $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/utils $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/models $DEPLOYPATH/api/
-    - /bin/cp -R $REPOPATH/controllers $DEPLOYPATH/api/
-    - /bin/cp $REPOPATH/package.json $DEPLOYPATH/api/
-    - /bin/cp $REPOPATH/.env $DEPLOYPATH/api/
+    - /bin/cp back-end/server.js $DEPLOYPATH/api/
+    - /bin/cp -R back-end/config $DEPLOYPATH/api/
+    - /bin/cp -R back-end/routes $DEPLOYPATH/api/
+    - /bin/cp -R back-end/utils $DEPLOYPATH/api/
+    - /bin/cp -R back-end/models $DEPLOYPATH/api/
+    - /bin/cp -R back-end/controllers $DEPLOYPATH/api/
+    - /bin/cp back-end/package.json $DEPLOYPATH/api/
+    - /bin/cp back-end/.env $DEPLOYPATH/api/
     - cd $DEPLOYPATH/api && npm install --production
+    - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
