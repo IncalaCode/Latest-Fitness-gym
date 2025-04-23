@@ -26,6 +26,16 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
 
+    try {
+      isPasswordValid = await bcrypt.compare(password, user?.password || '');
+    } catch (bcryptError) {
+      const error = new Error('Password verification failed');
+      error.statusCode = 503;
+      error.source = 'bcrypt';
+      return next(error);
+    }
+    
+
     return sendLoginResponse(res, user, role);
   } catch (error) {
     console.error('Login error:', error);
