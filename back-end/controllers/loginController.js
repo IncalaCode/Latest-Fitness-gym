@@ -23,7 +23,6 @@ exports.login = async (req, res, next) => {
       if (user) role = user.role;
     }
 
-    return res.status(400).json({ success: false, message:  user});
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email' });
     }
@@ -32,6 +31,8 @@ exports.login = async (req, res, next) => {
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: 'Invalid password' });
     }
+
+    return res.status(400).json({ success: false, message:  user});
 
     return sendLoginResponse(res, user, role);
   } catch (error) {
