@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSnackbar } from 'notistack';
 import { PrimaryButton } from '../ui/Buttons';
@@ -6,8 +6,17 @@ import { gradients } from '../../utils/themeColors';
 import usePayment from '../../hooks/usePayment';
 import PaymentMethodModal from '../payment/PaymentMethodModal';
 
-const PricingCard = ({ title, price, duration, features, isPopular, gradient, onSelectPlan }) => {
+const PricingCard = ({ title, price, duration, features, isPopular, gradient, onSelectPlan, genderSpecific = false }) => {
+  const [selectedGender, setSelectedGender] = useState('male');
   const gradientClass = gradients[gradient] || gradients.redOrange;
+  
+  const handleSelectPlan = () => {
+    const finalPrice = genderSpecific 
+      ? (selectedGender === 'male' ? price.male : price.female) 
+      : price;
+    
+    onSelectPlan(title, finalPrice, selectedGender);
+  };
   
   return (
     <motion.div 
@@ -27,20 +36,50 @@ const PricingCard = ({ title, price, duration, features, isPopular, gradient, on
       
       <div className={`w-full h-2 bg-gradient-to-r ${gradientClass}`}></div>
       
-      <div className="p-8">
+      <div className="p-6">
         <h3 className="text-2xl font-bold text-white mb-2">{title}</h3>
-        <div className="mb-2">
-          <span className="text-3xl font-bold text-white">{price}</span>
-          <span className="text-gray-400">/month</span>
-        </div>
-        <div className="mb-6">
-          <span className="text-sm text-gray-400">Valid for {duration} days</span>
-        </div>
         
-        <ul className="mb-8 space-y-4">
+        {genderSpecific ? (
+          <div className="mb-4">
+            {/* Improved gender toggle UI */}
+            <div className="flex bg-gray-900 p-1 rounded-full mb-3">
+              <button
+                className={`flex-1 py-1.5 px-2 rounded-full text-sm transition-colors ${
+                  selectedGender === 'male' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                onClick={() => setSelectedGender('male')}
+              >
+                Men: {price.male}
+              </button>
+              <button
+                className={`flex-1 py-1.5 px-2 rounded-full text-sm transition-colors ${
+                  selectedGender === 'female' 
+                    ? 'bg-pink-600 text-white' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                onClick={() => setSelectedGender('female')}
+              >
+                Women: {price.female}
+              </button>
+            </div>
+            <div className="text-sm text-gray-400 text-center">Valid for {duration} days</div>
+          </div>
+        ) : (
+          <div className="mb-5">
+            <div className="mb-2 text-center">
+              <span className="text-3xl font-bold text-white">{price}</span>
+              {duration !== 1 && <span className="text-gray-400">/package</span>}
+            </div>
+            <div className="text-sm text-gray-400 text-center">Valid for {duration} days</div>
+          </div>
+        )}
+        
+        <ul className="mb-6 space-y-3">
           {features.map((feature, index) => (
-            <li key={index} className="flex items-start">
-              <svg className="h-5 w-5 text-red-500 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <li key={index} className="flex items-start text-sm">
+              <svg className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
               <span className="text-gray-300">{feature}</span>
@@ -50,8 +89,8 @@ const PricingCard = ({ title, price, duration, features, isPopular, gradient, on
         
         <PrimaryButton 
           colorScheme={isPopular ? "redOrange" : "blueWhite"} 
-          className="w-full py-3 text-center"
-          onClick={() => onSelectPlan(title, price)}
+          className="w-full py-2.5 text-center text-sm font-medium"
+          onClick={handleSelectPlan}
         >
           Select Plan
         </PrimaryButton>
@@ -92,46 +131,87 @@ const ServicesSection = () => {
   }, [error, enqueueSnackbar, setError]);
   const pricingPlans = [
     {
-      title: "Fitness Basic",
-      price: "1,200 ETB",
-      priceValue: 1200,
-      duration: 30,
+      title: "Daily Plan",
+      price: "300 ETB",
+      priceValue: 300,
+      duration: 1,
       features: [
+        "One-day full access",
         "Full gym access",
-        "Basic fitness assessment",
-        "2 group classes per week",
-        "Locker access"
+        "Clean shower & dressing room",
+        "Secure parking",
+        "Basic trainer guidance"
       ],
       isPopular: false,
       gradient: "blueWhite"
     },
     {
-      title: "Premium",
-      price: "2,500 ETB",
-      priceValue: 2500,
+      title: "Monthly Plan",
+      price: {
+        male: "4,000 ETB",
+        female: "3,500 ETB"
+      },
+      priceValue: {
+        male: 4000,
+        female: 3500
+      },
       duration: 30,
       features: [
-        "Full gym & spa access",
-        "Advanced fitness assessment",
-        "Unlimited group classes",
-        "3 personal training sessions/month",
-        "Nutrition consultation",
-        "Towel service"
+        "2 guest coupons (free passes for friends)",
+        "Full gym access",
+        "Clean shower & dressing room",
+        "Secure parking",
+        "Basic trainer guidance"
       ],
       isPopular: true,
-      gradient: "redOrange"
+      gradient: "redOrange",
+      genderSpecific: true
     },
     {
-      title: "Spa Essentials",
-      price: "1,800 ETB",
-      priceValue: 1800,
-      duration: 30,
+      title: "3-Month Plan",
+      price: "10,680 ETB",
+      priceValue: 10680,
+      duration: 90,
       features: [
-        "Full spa access",
-        "2 massage treatments/month",
-        "Sauna & steam room",
-        "Pool access",
-        "Relaxation lounges"
+        "11% discount applied",
+        "5 guest coupons",
+        "Full gym access",
+        "Clean shower & dressing room",
+        "Secure parking",
+        "Basic trainer guidance"
+      ],
+      isPopular: false,
+      gradient: "blueWhite"
+    },
+    {
+      title: "6-Month Plan",
+      price: "20,400 ETB",
+      priceValue: 20400,
+      duration: 180,
+      features: [
+        "15% discount applied",
+        "10 guest coupons",
+        "15 free pass days included",
+        "Full gym access",
+        "Clean shower & dressing room",
+        "Secure parking",
+        "Basic trainer guidance"
+      ],
+      isPopular: false,
+      gradient: "blackWhite"
+    },
+    {
+      title: "12-Month Plan",
+      price: "38,880 ETB",
+      priceValue: 38880,
+      duration: 365,
+      features: [
+        "19% discount applied",
+        "30 free pass days",
+        "Full gym access",
+        "Clean shower & dressing room",
+        "Secure parking",
+        "Basic trainer guidance"
       ],
       isPopular: false,
       gradient: "blueWhite"
@@ -139,17 +219,26 @@ const ServicesSection = () => {
   ];
 
   // Handle plan selection
-  const handleSelectPlan = (planTitle) => {
-    // Find the plan object to get the price value
-    const selectedPlan = pricingPlans.find(plan => plan.title === planTitle);
+  const handleSelectPlan = (planTitle, price, gender = null) => {
+    // Find the plan object
+    const plan = pricingPlans.find(plan => plan.title === planTitle);
     
-    if (!selectedPlan) {
+    if (!plan) {
       enqueueSnackbar('Selected plan not found', { variant: 'error' });
       return;
     }
 
+    // Create a plan object with the selected details
+    const selectedPlanDetails = {
+      ...plan,
+      selectedGender: gender,
+      // If it's the monthly plan with gender-specific pricing, use the appropriate price
+      price: gender ? plan.price[gender] : plan.price,
+      priceValue: gender ? plan.priceValue[gender] : plan.priceValue
+    };
+
     // Open payment method selection modal
-    openPaymentMethodModal(selectedPlan);
+    openPaymentMethodModal(selectedPlanDetails);
   };
 
   // Handle payment method selection
@@ -210,13 +299,13 @@ const ServicesSection = () => {
           variants={fadeIn}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold text-white mb-4">Our Services</h2>
+          <h2 className="text-4xl font-bold text-white mb-4">💪 Individual Packages</h2>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Choose the perfect plan to achieve your fitness goals and wellness needs
+            Choose the perfect plan to achieve your fitness goals
           </p>
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {pricingPlans.map((plan, index) => (
             <motion.div
               key={index}
@@ -230,6 +319,7 @@ const ServicesSection = () => {
                   transition: { delay: 0.2 * index, duration: 0.6 }
                 }
               }}
+              className={isLoading ? "opacity-50 pointer-events-none" : ""}
             >
               <PricingCard 
                 title={plan.title}
@@ -238,7 +328,8 @@ const ServicesSection = () => {
                 features={plan.features}
                 isPopular={plan.isPopular}
                 gradient={plan.gradient}
-                onSelectPlan={(title) => handleSelectPlan(title)}
+                genderSpecific={plan.genderSpecific}
+                onSelectPlan={handleSelectPlan}
               />
             </motion.div>
           ))}

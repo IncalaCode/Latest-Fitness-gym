@@ -95,8 +95,7 @@ const ContactSection = () => {
                 </div>
                 <div>
                   <h4 className="text-xl font-medium text-white">Location</h4>
-                  <p className="text-gray-300">Hawassa City Center</p>
-                  <p className="text-gray-300">Near Lake Hawassa, Main Road</p>
+                  <p className="text-gray-300">Hawassa city 05, main road</p>
                   <p className="text-gray-300">Hawassa, Ethiopia</p>
                 </div>
               </motion.div>
@@ -107,7 +106,7 @@ const ContactSection = () => {
                 </div>
                 <div>
                   <h4 className="text-xl font-medium text-white">Phone</h4>
-                  <p className="text-gray-300">+251 911 123 456</p>
+                  <p className="text-gray-300">0722072324</p>
                 </div>
               </motion.div>
               
@@ -117,7 +116,7 @@ const ContactSection = () => {
                 </div>
                 <div>
                   <h4 className="text-xl font-medium text-white">Email</h4>
-                  <p className="text-gray-300">info@latestfitnesshawassa.com</p>
+                  <p className="text-gray-300">Info@latestfitnessethiopia.com</p>
                 </div>
               </motion.div>
               

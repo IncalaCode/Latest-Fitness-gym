@@ -88,18 +88,17 @@ const Footer = () => {
               <li className="flex items-start">
                 <FiMapPin className="mt-1 mr-3 text-red-500 flex-shrink-0" />
                 <span className="text-gray-400">
-                  Hawassa City Center<br />
-                  Near Lake Hawassa, Main Road<br />
+                  Hawassa city 05, main road<br />
                   Hawassa, Ethiopia
                 </span>
               </li>
               <li className="flex items-start">
                 <FiPhone className="mt-1 mr-3 text-red-500 flex-shrink-0" />
-                <span className="text-gray-400">+251 911 123 456</span>
+                <span className="text-gray-400">0722072324</span>
               </li>
               <li className="flex items-start">
                 <FiMail className="mt-1 mr-3 text-red-500 flex-shrink-0" />
-                <span className="text-gray-400">info@latestfitnesshawassa.com</span>
+                <span className="text-gray-400">Info@latestfitnessethiopia.com</span>
               </li>
               <li className="flex items-start">
                 <FiClock className="mt-1 mr-3 text-red-500 flex-shrink-0" />

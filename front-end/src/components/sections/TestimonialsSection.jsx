@@ -13,22 +13,22 @@ const TestimonialCard = ({ name, text, image, rating }) => {
   ));
 
   return (
-    <div className="bg-gray-800 rounded-lg p-8 shadow-lg relative h-full">
-      <div className="flex items-center mb-6">
+    <div className="bg-gray-800 rounded-lg p-4 sm:p-6 md:p-8 shadow-lg relative h-full">
+      <div className="flex items-center mb-4 md:mb-6">
         <img 
           src={image} 
           alt={name} 
-          className="w-16 h-16 rounded-full object-cover mr-4 border-2 border-red-500"
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mr-3 sm:mr-4 border-2 border-red-500"
         />
         <div>
-          <h3 className="text-xl font-bold text-white">{name}</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-white">{name}</h3>
           <div className="flex space-x-1 mt-1">
             {stars}
           </div>
         </div>
       </div>
-      <p className="text-gray-300 italic">"{text}"</p>
-      <div className="absolute -top-4 -left-4 text-5xl text-red-500 opacity-30">
+      <p className="text-sm sm:text-base text-gray-300 italic">"{text}"</p>
+      <div className="absolute -top-4 -left-4 text-4xl sm:text-5xl text-red-500 opacity-30">
         <i className="fas fa-quote-left"></i>
       </div>
     </div>
@@ -96,7 +96,7 @@ const TestimonialsSection = () => {
     return window.innerWidth >= 768 ? 2 : 1;
   };
 
-  const [testimonialsToShow, setTestimonialsToShow] = useState(2);
+  const [testimonialsToShow, setTestimonialsToShow] = useState(1); // Default to 1 for initial render
 
   // Update testimonials to show on window resize
   useEffect(() => {
@@ -124,10 +124,10 @@ const TestimonialsSection = () => {
     return result;
   };
 
-  // Animation variants
+  // Animation variants - reduced movement for mobile
   const slideVariants = {
     enter: (direction) => ({
-      x: direction > 0 ? 500 : -500,
+      x: direction > 0 ? window.innerWidth < 640 ? 300 : 500 : window.innerWidth < 640 ? -300 : -500,
       opacity: 0
     }),
     center: {
@@ -135,7 +135,7 @@ const TestimonialsSection = () => {
       opacity: 1
     },
     exit: (direction) => ({
-      x: direction > 0 ? -500 : 500,
+      x: direction > 0 ? window.innerWidth < 640 ? -300 : -500 : window.innerWidth < 640 ? 300 : 500,
       opacity: 0
     })
   };
@@ -148,16 +148,16 @@ const TestimonialsSection = () => {
   };
 
   return (
-    <section id="testimonials" className="py-20 bg-black">
+    <section id="testimonials" className="py-12 sm:py-20 bg-black overflow-hidden">
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-bold text-white text-center mb-16">Testimonials</h2>
+        <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-10 sm:mb-16">Testimonials</h2>
         
         {/* Carousel Container */}
-        <div className="relative max-w-6xl mx-auto">
+        <div className="relative max-w-6xl mx-auto px-8 sm:px-12">
           {/* Navigation Buttons */}
           <motion.button 
             onClick={prevSlide} 
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600 focus:outline-none"
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-red-500 text-white p-2 sm:p-3 rounded-full shadow-lg hover:bg-red-600 focus:outline-none"
             aria-label="Previous testimonial"
             variants={buttonVariants}
             initial="rest"
@@ -165,14 +165,13 @@ const TestimonialsSection = () => {
             whileTap="tap"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
-            style={{ left: '-20px' }}
           >
-            <FiChevronLeft className="text-xl" />
+            <FiChevronLeft className="text-lg sm:text-xl" />
           </motion.button>
           
           <motion.button 
             onClick={nextSlide} 
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600 focus:outline-none"
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-red-500 text-white p-2 sm:p-3 rounded-full shadow-lg hover:bg-red-600 focus:outline-none"
             aria-label="Next testimonial"
             variants={buttonVariants}
             initial="rest"
@@ -180,9 +179,8 @@ const TestimonialsSection = () => {
             whileTap="tap"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
-            style={{ right: '-20px' }}
           >
-            <FiChevronRight className="text-xl" />
+            <FiChevronRight className="text-lg sm:text-xl" />
           </motion.button>
 
           {/* Testimonials Carousel */}
@@ -196,7 +194,7 @@ const TestimonialsSection = () => {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.5 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 px-4"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8"
               >
                 {getVisibleTestimonials().map((testimonial) => (
                   <div key={testimonial.originalIndex} className="h-full">
@@ -213,7 +211,7 @@ const TestimonialsSection = () => {
           </div>
 
           {/* Carousel Indicators */}
-          <div className="flex justify-center mt-8 space-x-2">
+          <div className="flex justify-center mt-6 sm:mt-8 space-x-2">
             {testimonials.map((_, index) => (
               <button
                 key={index}
@@ -221,8 +219,8 @@ const TestimonialsSection = () => {
                   setDirection(index > currentIndex ? 1 : -1);
                   setCurrentIndex(index);
                 }}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? 'bg-red-500 w-6' : 'bg-gray-500'
+                className={`w-2 sm:w-3 h-2 sm:h-3 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-red-500 w-4 sm:w-6' : 'bg-gray-500'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
               />
