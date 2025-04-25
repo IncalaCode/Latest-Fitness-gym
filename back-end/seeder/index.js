@@ -1,10 +1,14 @@
 // seeders/adminSeed.js
 const bcrypt = require('bcryptjs');
-const { Admin } = require('../models'); // adjust path as needed
+const { Admin } = require('../models'); 
+const db = require('../config/InitDatabase');
 
 async function seedAdmins() {
   try {
+    await db.initialize();
+    
     const hashedPassword = await bcrypt.hash('admin123', 10);
+    
 
     const admins = [
       {

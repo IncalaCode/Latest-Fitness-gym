@@ -115,11 +115,6 @@ exports.sendMembershipReminder = async (req, res) => {
   }
 };
 
-/**
- * @desc    Send reminders for all memberships expiring soon
- * @route   POST /api/memberships/send-reminders
- * @access  Private/Admin
- */
 exports.sendExpirationReminders = async (req, res) => {
   try {
     const { days = 7 } = req.body; // Default to 7 days if not specified
