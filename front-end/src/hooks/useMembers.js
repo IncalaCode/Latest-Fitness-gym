@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { API_URL, GET_HEADER } from '../config/config';
 
 const useMembers = (rowsPerPage = 10) => {
-  const [members, setMembers] = useState([]);
+  const [allMembers, setAllMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMembers, setTotalMembers] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch members data from the API
-  const fetchMembers = async (page = 1, limit = rowsPerPage) => {
+  const fetchAllMembers = async () => {
     try {
       setLoading(true);
       const options = await GET_HEADER({ isJson: true });
       const response = await fetch(
-        `${API_URL}/users?page=${page}&limit=${limit}`, 
+        `${API_URL}/users`, 
         { 
           method: 'GET',
           headers: options.headers
@@ -29,8 +28,7 @@ const useMembers = (rowsPerPage = 10) => {
       const data = await response.json();
       
       if (data.success) {
-        setMembers(data.data.map(user => {
-          // Extract year from dateOfBirth (format: YYYY-MM-DD)
+        const formattedMembers = data.data.map(user => {
           const birthYear = user.dateOfBirth ? new Date(user.dateOfBirth).getFullYear() : 'N/A';
           
           return {
@@ -43,13 +41,13 @@ const useMembers = (rowsPerPage = 10) => {
             emergencyContact: user.emergencyContact || 'N/A',
             address: user.address || 'N/A',
             birthYear: birthYear,
-            lastVisit: 'N/A', // This data isn't available in the User model
             photoUrl: user.photoUrl
           };
-        }));
+        });
         
-        setTotalMembers(data.count || 0);
-        setTotalPages(Math.ceil((data.count || 0) / limit));
+        setAllMembers(formattedMembers);
+        setTotalMembers(formattedMembers.length);
+        setTotalPages(Math.ceil(formattedMembers.length / rowsPerPage));
       } else {
         throw new Error(data.message || 'Failed to fetch members');
       }
@@ -61,15 +59,25 @@ const useMembers = (rowsPerPage = 10) => {
     }
   };
 
-  // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
-  // Fetch members when component mounts or when page/rowsPerPage changes
+  const members = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return allMembers.slice(startIndex, endIndex);
+  }, [allMembers, currentPage, rowsPerPage]);
+
+
   useEffect(() => {
-    fetchMembers(currentPage, rowsPerPage);
-  }, [currentPage, rowsPerPage]);
+    setTotalPages(Math.ceil(totalMembers / rowsPerPage));
+  }, [rowsPerPage, totalMembers]);
+
+  // Fetch all members when component mounts
+  useEffect(() => {
+    fetchAllMembers();
+  }, []);
 
   return {
     members,
@@ -80,7 +88,7 @@ const useMembers = (rowsPerPage = 10) => {
     totalMembers,
     rowsPerPage,
     handlePageChange,
-    refetch: () => fetchMembers(currentPage, rowsPerPage)
+    refetch: fetchAllMembers
   };
 };
 
