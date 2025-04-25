@@ -62,18 +62,23 @@ const generateQRData = (payment, user, isTemporary = false) => {
     userId: payment.userId,
     userName: user ? user.fullName : 'Gym Member',
     planTitle: payment.planTitle,
+    paymentMethod : payment.paymentMethod,
     membershipType: payment.planTitle,
     isTemporary
   };
   
   if (isTemporary) {
-    baseData.status = 'pending';
-    baseData.message = 'Payment pending approval. Please show this to the staff.';
+    if(payment.paymentMethod == "incash"){
+      baseData.status = 'pending';
+      baseData.message = 'Your in Payment pending approval. Please show this to the staff.';
+    }else{
+      baseData.status = 'pending';
+      baseData.message = 'Your online Payment pending approval. Please show this to the staff.';
+    }
   } else {
     baseData.status = 'active';
     
     if (payment.expiryDate) {
-      // Safely add expiry date if it exists and is valid
       const expiryDate = new Date(payment.expiryDate);
       if (!isNaN(expiryDate.getTime())) {
         baseData.expiryDate = payment.expiryDate;
@@ -89,7 +94,7 @@ const generateQRData = (payment, user, isTemporary = false) => {
   return {
     ...baseData,
     dailyCode: signature.substring(0, 8),
-    signature,
+    // signature,
     generatedOn: safeFormatDate(new Date(), 'iso', new Date().toISOString()),
     validForDate: safeFormatDate(new Date(), 'isoDate', new Date().toISOString().split('T')[0])
   };

@@ -2,10 +2,10 @@ require('dotenv').config();
 
 module.exports = {
   development: {
-    username: process.env.DB_USERNAME || "root",
-    password: process.env.DB_PASSWORD || null,
-    database: process.env.DB_NAME || "gym",
-    host: process.env.DB_HOST || "127.0.0.1",
+    username:  "root",
+    password:  null,
+    database: "gym",
+    host: "127.0.0.1",
     dialect: "mysql",
     logging: console.log,
     define: {
@@ -17,20 +17,6 @@ module.exports = {
     dialectOptions: {
       supportBigNumbers: true,
       bigNumberStrings: true
-    }
-  },
-  test: {
-    username: process.env.DB_USERNAME || "root",
-    password: process.env.DB_PASSWORD || null,
-    database: process.env.DB_NAME_TEST || "gym",
-    host: process.env.DB_HOST || "127.0.0.1",
-    dialect: "mysql",
-    logging: false,
-    define: {
-      charset: 'utf8mb4',
-      collate: 'utf8mb4_unicode_ci',
-      timestamps: true,
-      underscored: false
     }
   },
   production: {

@@ -6,16 +6,12 @@ import { gradients } from '../../utils/themeColors';
 import usePayment from '../../hooks/usePayment';
 import PaymentMethodModal from '../payment/PaymentMethodModal';
 
-const PricingCard = ({ title, price, duration, features, isPopular, gradient, onSelectPlan, genderSpecific = false }) => {
+const PricingCard = ({ title, price, duration, features, isPopular, gradient, genderSpecific = false  , onSelectPlan}) => {
   const [selectedGender, setSelectedGender] = useState('male');
   const gradientClass = gradients[gradient] || gradients.redOrange;
   
   const handleSelectPlan = () => {
-    const finalPrice = genderSpecific 
-      ? (selectedGender === 'male' ? price.male : price.female) 
-      : price;
-    
-    onSelectPlan(title, finalPrice, selectedGender);
+    onSelectPlan(title, genderSpecific ? selectedGender : null);
   };
   
   return (
@@ -113,7 +109,6 @@ const ServicesSection = () => {
     setError 
   } = usePayment();
 
-  // Display error notification when error state changes
   useEffect(() => {
     if (error) {
       enqueueSnackbar(error, { 
@@ -124,15 +119,13 @@ const ServicesSection = () => {
         },
         autoHideDuration: 5000
       });
-      
-      // Clear error after showing notification
       setError(null);
     }
   }, [error, enqueueSnackbar, setError]);
   const pricingPlans = [
     {
       title: "Daily Plan",
-      price: "300 ETB",
+      price:  "300 ETB",
       priceValue: 300,
       duration: 1,
       features: [
@@ -218,9 +211,7 @@ const ServicesSection = () => {
     }
   ];
 
-  // Handle plan selection
-  const handleSelectPlan = (planTitle, price, gender = null) => {
-    // Find the plan object
+  const handleSelectPlan = (planTitle, gender = null) => {
     const plan = pricingPlans.find(plan => plan.title === planTitle);
     
     if (!plan) {
@@ -228,20 +219,16 @@ const ServicesSection = () => {
       return;
     }
 
-    // Create a plan object with the selected details
     const selectedPlanDetails = {
       ...plan,
       selectedGender: gender,
-      // If it's the monthly plan with gender-specific pricing, use the appropriate price
       price: gender ? plan.price[gender] : plan.price,
       priceValue: gender ? plan.priceValue[gender] : plan.priceValue
     };
 
-    // Open payment method selection modal
     openPaymentMethodModal(selectedPlanDetails);
   };
 
-  // Handle payment method selection
   const handleSelectPaymentMethod = async (paymentMethod) => {
     try {
       const paymentData = await processPayment(paymentMethod);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from 'notistack';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/loginpage';
@@ -11,13 +11,12 @@ import TermsAndConditions from './pages/legal/TermsAndConditions';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from "./Admin/components/AdminDashboard";
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import MembersTab from './Admin/components/tabs/MembersTab';
-import PendingApprovalsTab from './Admin/components/tabs/PendingApprovalsTab';
-import ExpiringMembershipsTab from './Admin/components/tabs/ExpiringMembershipsTab';
-// import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import PrivacyPolicy from './pages/legal/pp';
 
 function App() {
   return (
+
+    
     <SnackbarProvider 
       maxSnack={3} 
       anchorOrigin={{
@@ -41,6 +40,7 @@ function App() {
           } />
           
           <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           
           {/* Admin routes */}
           <Route path="/admin-dashboard" element={
@@ -76,8 +76,8 @@ function App() {
               <AdminDashboard />
             </ProtectedRoute>
           } />
-          
-          {/* <Route path="/privacy" element={<PrivacyPolicy/>} /> */}
+
+        <Route path="*" element={<Navigate to={"/"}   />} />
         </Routes>
       </Router>
     </SnackbarProvider>

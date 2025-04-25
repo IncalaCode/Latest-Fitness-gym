@@ -410,14 +410,21 @@ export default function PendingApprovalsTab() {
                         <p className="text-sm text-gray-500">Payment Method</p>
                         <p className="font-medium capitalize">{selectedPayment.paymentMethod || "N/A"}</p>
                       </div>
+                      {selectedPayment.gender && (
+                        <div>
+                          <p className="text-sm text-gray-500">Gender</p>
+                          <p className="font-medium">{selectedPayment.gender || "N/A"}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-gray-500">Status</p>
-                        <p className="font-medium capitalize">{selectedPayment.paymentstatus || "N/A"}</p>
+                        <p className="font-medium capitalize">{selectedPayment.paymentstatus || ""}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Date</p>
                         <p className="font-medium">{formatDate(selectedPayment.createdAt)}</p>
                       </div>
+
                     </div>
                   </div>
                 </div>

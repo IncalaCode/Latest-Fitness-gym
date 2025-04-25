@@ -31,7 +31,8 @@ exports.getPendingApprovals = async (req, res) => {
         'paymentstatus',
         'paymentMethod',
         'createdAt',
-        'paymentimage'
+        'paymentimage',
+        "gender"
       ],
       include: [{
         model: User,

@@ -13,9 +13,24 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [scanAttempts, setScanAttempts] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const scannerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   useEffect(() => {
     if (scanAttempts > 0) {
@@ -34,14 +49,18 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
       setError(null);
       setCameraError(false);
       setShowImageUpload(false);
-      setScanAttempts(0)
+      setScanAttempts(0);
       checkCameraAvailability();
     }
 
     return () => {
       stopScanner();
       if (html5QrCodeRef.current) {
-        html5QrCodeRef.current.clear();
+        try {
+          html5QrCodeRef.current.clear();
+        } catch (err) {
+          console.error("Error clearing scanner:", err);
+        }
         html5QrCodeRef.current = null;
       }
     };
@@ -64,19 +83,27 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     if (scannerRef.current && !html5QrCodeRef.current) {
       try {
         html5QrCodeRef.current = new Html5Qrcode("qr-reader");
+        console.log("Scanner initialized successfully");
       } catch (err) {
         console.error("Scanner initialization error:", err);
         setCameraError(true);
         setShowImageUpload(true);
+        setError("Failed to initialize scanner. Please try the image upload option.");
       }
     }
   };
 
   const startScanner = () => {
     if (!html5QrCodeRef.current) {
-      setError("Scanner not initialized. Please try the image upload option.");
-      setShowImageUpload(true);
-      return;
+      try {
+        html5QrCodeRef.current = new Html5Qrcode("qr-reader");
+      } catch (err) {
+        console.error("Scanner initialization error:", err);
+        setError("Scanner not initialized. Please try the image upload option.");
+        setShowImageUpload(true);
+        setCameraError(true);
+        return;
+      }
     }
 
     setScanning(true);
@@ -85,8 +112,8 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     setEmbedUrl(null);
 
     const config = {
-      fps: 24,
-      qrbox: { width: 500, height: 500 },
+      fps: 10, // Lower fps for better performance
+      qrbox: { width: 250, height: 250 },
       aspectRatio: 1.0,
     };
 
@@ -116,6 +143,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
   const stopScanner = () => {
     if (html5QrCodeRef.current && scanning) {
       html5QrCodeRef.current.stop().then(() => {
+        console.log("Scanner stopped successfully");
         setScanning(false);
       }).catch(err => {
         console.error("Failed to stop scanner:", err);
@@ -127,6 +155,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
   };
 
   const onScanSuccess = (decodedText) => {
+    console.log("QR Code detected:", decodedText);
     stopScanner();
     
     // Validate if it's a YouTube URL
@@ -135,10 +164,14 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
       
       // Convert to embed URL
       const embedUrl = convertToEmbedUrl(decodedText);
-      setEmbedUrl(embedUrl);
-      
-      setVideoTitle('YouTube Video');
-      setError(null);
+      if (embedUrl) {
+        setEmbedUrl(embedUrl);
+        setVideoTitle('YouTube Video');
+        setError(null);
+      } else {
+        setError("Failed to process YouTube URL. Please try again.");
+        setVideoUrl(null);
+      }
     } else {
       setError("The scanned QR code is not a valid YouTube URL. Please try again.");
       setVideoUrl(null);
@@ -184,7 +217,10 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
   };
 
   const onScanFailure = (error) => {
-    if (error.includes("NotFoundException")) {
+    // Only log to console to avoid UI clutter
+    console.log("QR scan failure:", error);
+    
+    if (error && error.includes && error.includes("NotFoundException")) {
       setScanAttempts(prev => prev + 1);
       if (scanAttempts > 5 && !error) {
         setError("Having trouble finding a QR code? Make sure the QR code is well-lit and centered in the camera view.");
@@ -205,32 +241,65 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     setVideoUrl(null);
     setEmbedUrl(null);
 
-    const fileReader = new FileReader();
-    fileReader.onload = function (e) {
-      const imageUrl = e.target.result;
-      const html5QrcodeScanner = new Html5Qrcode("file-scanner");
+    // Create a temporary scanner or use existing one
+    let tempScanner;
+    if (html5QrCodeRef.current) {
+      tempScanner = html5QrCodeRef.current;
+    } else {
+      try {
+        tempScanner = new Html5Qrcode("file-scanner");
+      } catch (err) {
+        console.error("Failed to create scanner for file:", err);
+        setError("Failed to initialize scanner for file upload. Please try again.");
+        return;
+      }
+    }
 
-      html5QrcodeScanner.scanFile(file)
-        .then(decodedText => {
-          if (isYouTubeUrl(decodedText)) {
-            setError(null);
-            onScanSuccess(decodedText);
+    tempScanner.scanFile(file, true)
+      .then(decodedText => {
+        console.log("File scan result:", decodedText);
+        if (isYouTubeUrl(decodedText)) {
+          setError(null);
+          // Process the URL directly instead of calling onScanSuccess to avoid stopping a scanner that might not be running
+          setVideoUrl(decodedText);
+          const embedUrl = convertToEmbedUrl(decodedText);
+          if (embedUrl) {
+            setEmbedUrl(embedUrl);
+            setVideoTitle('YouTube Video');
           } else {
-            setError("The scanned QR code is not a valid YouTube URL. Please try again.");
+            setError("Failed to process YouTube URL. Please try again.");
+            setVideoUrl(null);
           }
-          html5QrcodeScanner.clear();
-        })
-        .catch(err => {
-          console.error("QR code scan error:", err);
-          if (err.toString().includes("NotFoundException")) {
-            setError("No QR code found in the image. Please try a clearer image.");
-          } else {
-            setError("Could not decode QR code. Make sure the image contains a clear QR code.");
+        } else {
+          setError("The scanned QR code is not a valid YouTube URL. Please try again.");
+        }
+        
+        // Only clear if it's a temporary scanner
+        if (tempScanner !== html5QrCodeRef.current) {
+          try {
+            tempScanner.clear();
+          } catch (err) {
+            console.error("Error clearing temporary scanner:", err);
           }
-          html5QrcodeScanner.clear();
-        });
-    };
-    fileReader.readAsDataURL(file);
+        }
+      })
+      .catch(err => {
+        console.error("QR code scan error:", err);
+        if (err.toString().includes("NotFoundException")) {
+          setError("No QR code found in the image. Please try a clearer image.");
+        } else {
+          setError("Could not decode QR code. Make sure the image contains a clear QR code.");
+        }
+        
+        // Only clear if it's a temporary scanner
+        if (tempScanner !== html5QrCodeRef.current) {
+          try {
+            tempScanner.clear();
+          } catch (err) {
+            console.error("Error clearing temporary scanner:", err);
+          }
+        }
+      });
   };
 
   const triggerFileInput = () => {
@@ -249,13 +318,54 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
     }
   };
 
+  // FIXED scanAgain function to properly reset for both camera and upload modes
   const scanAgain = () => {
+    // First stop any active scanner
+    stopScanner();
+    
+    // Reset all video-related state
     setVideoUrl(null);
     setEmbedUrl(null);
     setError(null);
-    if (!showImageUpload) {
-      startScanner();
+    setScanAttempts(0);
+    
+    // Clear the file input if it exists
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
+    
+    // Reset the scanner if needed
+    if (html5QrCodeRef.current) {
+      try {
+        // Stop the scanner first (redundant but safe)
+        html5QrCodeRef.current.stop().catch(err => {
+          console.error("Error stopping scanner during reset:", err);
+        });
+        
+        // Clear the scanner instance
+        html5QrCodeRef.current.clear().catch(err => {
+          console.error("Error clearing scanner during reset:", err);
+        });
+        
+        // Set to null to force re-initialization
+        html5QrCodeRef.current = null;
+      } catch (err) {
+        console.error("Error resetting scanner:", err);
+      }
+    }
+    
+    // Small delay to ensure DOM is updated before restarting
+    setTimeout(() => {
+      // Re-initialize the scanner
+      initializeScanner();
+      
+      // If in camera mode, restart the scanner
+      if (!showImageUpload && !cameraError) {
+        startScanner();
+      }
+    }, 300);
+    
+    console.log("Scanner reset complete. Mode:", showImageUpload ? "Image Upload" : "Camera");
   };
 
   return (
@@ -277,10 +387,13 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
             </button>
           </div>
 
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-xl">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <FiYoutube className="mr-2 text-red-500" /> QR Scanner
-            </h2>
+          <div className={`bg-gray-800 rounded-xl ${embedUrl && isMobile ? 'p-3' : 'p-6'} w-full max-w-xl ${embedUrl && isMobile ? 'max-w-full' : ''}`}>
+            {/* Only show header when not showing video on mobile */}
+            {!(embedUrl && isMobile) && (
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <FiYoutube className="mr-2 text-red-500" /> QR Scanner
+              </h2>
+            )}
 
             {!videoUrl ? (
               <>
@@ -364,14 +477,27 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
               <div className="animate-fadeIn">
                 {embedUrl ? (
                   <>
-                    <div className="w-full mb-6">
-                      {/* Responsive container for the iframe */}
-                      <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingTop: '56.25%' }}>
+                    {/* Enhanced video container with better mobile responsiveness */}
+                    <div className={`w-full ${isMobile ? 'mb-3' : 'mb-6'}`}>
+                      {/* Responsive container for the iframe with improved mobile sizing */}
+                      <div 
+                        className={`relative w-full overflow-hidden rounded-lg ${isMobile ? 'fixed-aspect-ratio' : ''}`} 
+                        style={isMobile ? {
+                          paddingTop: '75%', // Higher aspect ratio on mobile for bigger video
+                          height: 'auto',
+                          maxHeight: '70vh' // Limit height on mobile
+                        } : { 
+                          paddingTop: '56.25%' // Standard 16:9 aspect ratio for desktop
+                        }}
+                      >
                         <iframe
                           src={embedUrl}
                           title="YouTube video player"
                           className="absolute top-0 left-0 w-full h-full"
-                          style={{ minHeight: '300px' }}
+                          style={{ 
+                            minHeight: isMobile ? '250px' : '300px',
+                            border: 'none'
+                          }}
                           frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
@@ -379,12 +505,12 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
                       </div>
                     </div>
                     
-                    {/* Buttons below the video */}
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Buttons below the video - stacked on mobile for better touch targets */}
+                    <div className={`${isMobile ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-2 gap-4'}`}>
                       <PrimaryButton 
                         onClick={openYouTubeLink} 
                         colorScheme="redOrange"
-                        className="flex items-center justify-center"
+                        className={`flex items-center justify-center ${isMobile ? 'py-3' : ''}`}
                       >
                         <FiExternalLink className="mr-2" /> Open in YouTube
                       </PrimaryButton>
@@ -392,7 +518,7 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
                       <PrimaryButton 
                         onClick={scanAgain} 
                         colorScheme="blueWhite"
-                        className="flex items-center justify-center"
+                        className={`flex items-center justify-center ${isMobile ? 'py-3' : ''}`}
                       >
                         <FiRefreshCw className="mr-2" /> Scan Another
                       </PrimaryButton>
@@ -409,18 +535,18 @@ const YouTubeQRScanner = ({ onClose, isOpen }) => {
                       {videoUrl}
                     </p>
                     
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={`${isMobile ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-2 gap-3'}`}>
                       <PrimaryButton 
                         onClick={openYouTubeLink} 
                         colorScheme="redOrange"
-                        className="flex items-center justify-center"
+                        className={`flex items-center justify-center ${isMobile ? 'py-3' : ''}`}
                       >
                         <FiExternalLink className="mr-2" /> Open Video
                       </PrimaryButton>
                       <PrimaryButton 
                         onClick={scanAgain} 
                         colorScheme="blueWhite"
-                        className="flex items-center justify-center"
+                        className={`flex items-center justify-center ${isMobile ? 'py-3' : ''}`}
                       >
                         <FiRefreshCw className="mr-2" /> Scan Another
                       </PrimaryButton>
