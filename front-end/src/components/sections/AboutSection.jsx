@@ -16,7 +16,7 @@ const AboutSection = () => {
     {
       id: 'equipment',
       title: 'State-of-the-Art Equipment',
-      image: '/home/heroimg1.png',
+      image: '/home/landingpageimage1.JPG',
       imageAlt: 'State-of-the-Art Equipment',
       description: [
         'Our fitness center boasts the latest high-end equipment for every training style. From advanced cardio machines with integrated entertainment systems to premium free weights and specialized functional training zones, we provide the tools you need to achieve your fitness goals efficiently and safely.',

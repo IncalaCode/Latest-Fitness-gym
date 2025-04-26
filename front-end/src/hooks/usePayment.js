@@ -74,6 +74,7 @@ const usePayment = () => {
         body: JSON.stringify({
           planTitle: selectedPlan.title,
           planPrice: selectedPlan.priceValue,
+          gender : selectedPlan.selectedGender,
           currency,
           paymentMethod
         })

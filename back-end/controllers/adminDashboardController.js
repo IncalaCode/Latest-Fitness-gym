@@ -253,7 +253,7 @@ async function calculateBookingsChange() {
 }
 exports.updateAdminProfile = async (req, res) => {
   try {
-    const adminId = req.user.id; // Get admin ID from authenticated user
+    const adminId = req.user.id; 
     const { firstName, lastName, password, currentPassword } = req.body;
 
     // Find the admin by ID
@@ -266,35 +266,14 @@ exports.updateAdminProfile = async (req, res) => {
       });
     }
 
-    // Create an object to store fields to update
+
     const updateFields = {};
     
-    // Update name fields if provided
     if (firstName) updateFields.firstName = firstName;
     if (lastName) updateFields.lastName = lastName;
     
-    // If password change is requested, verify current password first
     if (password) {
-      // If current password is not provided
-      if (!currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is required to update password'
-        });
-      }
-      
-      // Verify current password
-      const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
-      
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          success: false,
-          message: 'Current password is incorrect'
-        });
-      }
-      
-      // Hash the new password
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(2);
       updateFields.password = await bcrypt.hash(password, salt);
     }
     

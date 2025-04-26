@@ -69,7 +69,6 @@ const useRegistration = () => {
       
       const options = await GET_HEADER({ isJson: true });
       
-      // Make the API call to register endpoint
       const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
         method: 'POST',
         headers: options.headers,

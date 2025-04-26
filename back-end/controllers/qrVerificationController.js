@@ -102,7 +102,7 @@ exports.verifyQRCode = async (req, res) => {
     console.error('Error verifying QR code:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server Error',
+      message: 'error verifying QR code',
       error: error.message
     });
   }

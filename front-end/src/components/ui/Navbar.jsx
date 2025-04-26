@@ -250,11 +250,11 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu - Fixed positioning to prevent overflow */}
         <AnimatePresence>
           {isOpen && (
             <motion.div 
-              className="md:hidden bg-black bg-opacity-95"
+              className="md:hidden fixed top-[60px] left-0 right-0 bg-black bg-opacity-95 overflow-y-auto max-h-[calc(100vh-60px)]"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -311,7 +311,10 @@ const Navbar = () => {
                       </NavLink>
                     )}
                     <div className="mt-4 px-3 pb-3">
-                      <PrimaryButton onClick={openLogoutDialog} colorScheme="redOrange" className="w-full">Logout</PrimaryButton>
+                      <PrimaryButton onClick={() => {
+                        setIsOpen(false);
+                        openLogoutDialog();
+                      }} colorScheme="redOrange" className="w-full">Logout</PrimaryButton>
                     </div>
                   </>
                 ) : (
@@ -328,7 +331,16 @@ const Navbar = () => {
                     </NavLink>
                     {isHomePage && (
                       <div className="mt-4 px-3 pb-3">
-                        <PrimaryButton onClick={navigateToPackage} colorScheme="redOrange" className="w-full">Join Now</PrimaryButton>
+                        <PrimaryButton 
+                          onClick={() => {
+                            setIsOpen(false);
+                            navigateToPackage();
+                          }} 
+                          colorScheme="redOrange" 
+                          className="w-full"
+                        >
+                          Join Now
+                        </PrimaryButton>
                       </div>
                     )}
                   </>
@@ -357,9 +369,9 @@ const Navbar = () => {
           {"Confirm Logout"}
         </DialogTitle>
         <DialogContent>
-          <DialogTitle id="logout-dialog-title" className="text-center font-bold text-white">
-          {"Are you sure you want to log out of your account?"}
-        </DialogTitle>
+          <DialogTitle id="logout-dialog-description" className="text-center text-gray-300">
+            Are you sure you want to log out of your account?
+          </DialogTitle>
         </DialogContent>
         <DialogActions className="flex justify-center pb-4 px-6 gap-4">
           <SecondaryButton onClick={closeLogoutDialog} className="px-6">

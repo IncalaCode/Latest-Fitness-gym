@@ -23,13 +23,13 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'uploads')));
 
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/api', routes);
+
+app.use(express.static(path.join(__dirname)));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-
-app.use('/api', routes);
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
@@ -42,14 +42,14 @@ app.use((err, req, res, next) => {
 
 const startServer = async () => {
   try {
-    const dbInfo = await db.initialize();
+    // const dbInfo = await db.initialize();
     initScheduledTasks();
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📚 Database: ${dbInfo.database} (${dbInfo.tableCount} tables)`);
-      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-    });
+    // app.listen(PORT, () => {
+    //   console.log(`🚀 Server running on port ${PORT}`);
+    //   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    //   console.log(`📚 Database: ${dbInfo.database} (${dbInfo.tableCount} tables)`);
+    //   console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+    // });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
@@ -57,6 +57,7 @@ const startServer = async () => {
 };
 
 startServer();
+
 
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Promise Rejection:', err);

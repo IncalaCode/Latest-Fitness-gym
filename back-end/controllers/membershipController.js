@@ -9,7 +9,7 @@ exports.getExpiringMemberships = async (req, res) => {
     const today = new Date();
     const expiringMemberships = await Payment.findAll({
       where: {
-        status: 'completed',
+        paymentstatus: 'completed',
         expiryDate: {
           [Op.and]: {
             [Op.gte]: today,
@@ -21,7 +21,7 @@ exports.getExpiringMemberships = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'phoneNumber']
+          attributes: ['id', 'fullName', 'phone']
         }
       ],
       order: [['expiryDate', 'ASC']]
@@ -38,8 +38,8 @@ exports.getExpiringMemberships = async (req, res) => {
       
       return {
         id: membership.id,
-        name: `${membership.user.firstName} ${membership.user.lastName}`,
-        phone: membership.user.phoneNumber,
+        name: membership.user.fullName,
+        phone: membership.user.phone,
         membershipType: membership.planTitle,
         expirationDate: membership.expiryDate.toISOString().split('T')[0],
         daysRemaining: daysRemaining
@@ -94,7 +94,7 @@ exports.sendMembershipReminder = async (req, res) => {
       
       return res.status(200).json({
         success: true,
-        message: `Reminder sent to ${membership.user.firstName} ${membership.user.lastName}`,
+        message: `Reminder sent to ${membership.user.fullName}`,
         daysRemaining
       });
     } catch (emailError) {
@@ -115,11 +115,6 @@ exports.sendMembershipReminder = async (req, res) => {
   }
 };
 
-/**
- * @desc    Send reminders for all memberships expiring soon
- * @route   POST /api/memberships/send-reminders
- * @access  Private/Admin
- */
 exports.sendExpirationReminders = async (req, res) => {
   try {
     const { days = 7 } = req.body; // Default to 7 days if not specified
@@ -132,7 +127,7 @@ exports.sendExpirationReminders = async (req, res) => {
     // Find memberships expiring in the specified number of days
     const expiringMemberships = await Payment.findAll({
       where: {
-        status: 'completed',
+        paymentstatus: 'completed',
         expiryDate: {
           [Op.gte]: today, // Greater than or equal to today
           [Op.lte]: targetDate // Less than or equal to target date
@@ -142,7 +137,7 @@ exports.sendExpirationReminders = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phoneNumber']
+          attributes: ['id', "fullName", 'email', 'phone']
         }
       ]
     });

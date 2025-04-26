@@ -7,22 +7,17 @@ import { QRCodeSVG } from 'qrcode.react';
 const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMessage, isRenewal, variants }) => {
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
   const [qrSize, setQrSize] = useState(240);
-  
-  // Calculate QR size based on screen dimensions
+
   useEffect(() => {
     const calculateQrSize = () => {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
       const maxSize = Math.min(screenWidth * 0.8, screenHeight * 0.5);
-      
-      // Cap the size at 500px for larger screens
       return Math.min(maxSize, 500);
     };
-    
-    // Set initial size
+  
     setQrSize(calculateQrSize());
-    
-    // Update size on window resize
+
     const handleResize = () => {
       setQrSize(calculateQrSize());
     };
@@ -171,10 +166,10 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
           </>
         ) : isPendingApproval && hasPendingInCashPayment ? (
           <>
-            <p className="text-yellow-400 text-sm mb-2">
+            <p className="text-yellow-400 text-sm mb-1">
               {isRenewal 
                 ? "Your membership renewal payment is pending approval."
-                : "Your new membership payment is pending approval."}
+                : qrCodeData.message}
             </p>
             <p className="text-gray-300 text-xs">
               Please show this QR code to the staff at reception to complete the payment process.
@@ -209,13 +204,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
       
       {/* Action Button - Changes based on membership status */}
       {hasActiveMembership ? (
-        <PrimaryButton 
-          colorScheme="redOrange" 
-          className="w-full max-w-xs flex items-center justify-center"
-          disabled={isQrCodeBlurred}
-        >
-        see u next day
-        </PrimaryButton>
+        <></>
       ) : isPendingApproval && hasPendingInCashPayment ? (
         <PrimaryButton 
           colorScheme="yellow" 
@@ -263,7 +252,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
             </div>
             
             <div className="flex flex-col items-center max-w-full">
-              <div className="relative bg-white p-4 rounded-lg mb-6 border-4 border-yellow-500 max-w-full">
+              <div className="relative bg-white p-4 top-2.5 rounded-lg mb-6 border-4 border-yellow-500 max-w-full">
                 <QRCodeSVG 
                   value={generateQRValue()} 
                   size={qrSize} 
@@ -297,7 +286,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
                 <p className="text-yellow-400 text-lg mb-2">
                   {isRenewal 
                     ? "Your membership renewal payment is pending approval."
-                    : "Your new membership payment is pending approval."}
+                    : qrCodeData.message}
                 </p>
                 <p className="text-gray-300">
                   Please show this screen to the staff at reception to complete the payment process.

@@ -61,7 +61,7 @@ exports.calculateExpiryDate = (paymentDate = new Date()) => {
 
 exports.initializePayment = async (req, res) => {
   try {
-    const { planTitle, planPrice, currency = 'ETB', paymentMethod = 'online' } = req.body;
+    const { planTitle, planPrice, currency , paymentMethod ,gender } = req.body;
     const userId = req.user.id;
 
     if (!planTitle || !planPrice) {
@@ -90,6 +90,7 @@ exports.initializePayment = async (req, res) => {
       if (existingPayment) {
         existingPayment.planTitle = planTitle;
         existingPayment.amount = planPrice;
+        existingPayment.gender = gender
         existingPayment.currency = currency;
         existingPayment.txRef = txRef;
         await existingPayment.save();
@@ -101,6 +102,7 @@ exports.initializePayment = async (req, res) => {
           amount: planPrice, 
           currency,
           txRef,
+          gender,
           paymentstatus: 'pending',
           paymentMethod: 'incash',
           isTemporary: true
@@ -134,6 +136,7 @@ exports.initializePayment = async (req, res) => {
       if (existingPayment) {
         existingPayment.planTitle = planTitle;
         existingPayment.amount = planPrice;
+        existingPayment.gender = gender
         existingPayment.currency = currency;
         existingPayment.txRef = txRef;
         await existingPayment.save();
@@ -145,6 +148,7 @@ exports.initializePayment = async (req, res) => {
           amount: planPrice,
           currency,
           txRef,
+          gender,
           paymentstatus: 'pending',
           paymentMethod: 'online',
           isTemporary: true

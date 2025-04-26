@@ -6,13 +6,13 @@ import {
   Users,
   UserCog,
   CreditCard,
-
   LogOut,
   ChevronLeft,
   ChevronRight,
   X,
   Calendar,
   Settings,
+  Menu,
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
@@ -25,12 +25,7 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
   // Check if screen is mobile size
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px is the standard md breakpoint
-      
-      // Auto close sidebar on mobile
-      if (window.innerWidth < 768 && isOpen) {
-        setIsOpen(false);
-      }
+      setIsMobile(window.innerWidth < 768); 
     };
     
     // Check on initial load
@@ -83,10 +78,24 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
 
   return (
     <>
+      {/* Mobile Toggle Button - Fixed position */}
+      {isMobile && (
+        <button
+          onClick={toggleSidebar}
+          className="fixed z-20 bottom-6 right-6 bg-[#0f172a] text-white p-3 rounded-full shadow-lg hover:bg-[#0f172a] transition-all duration-300"
+          aria-label="Toggle Sidebar"
+        >
+          {isOpen ? <ChevronLeft size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+
+      {/* Sidebar - Hidden by default on mobile */}
       <div
-        className={`bg-[#0f172a] text-white flex flex-col h-full transition-all duration-300 ${
-          isOpen ? "w-64" : "w-20"
-        } md:w-auto md:${isOpen ? "w-64" : "w-20"}`}
+        className={`bg-[#0f172a] text-white flex flex-col h-full transition-all duration-300 
+          ${isOpen ? "w-64" : "w-20"} 
+          ${isMobile ? (isOpen ? "translate-x-0" : "translate-x-[-100%]") : ""} 
+          fixed md:relative z-10 shadow-lg md:shadow-none
+          md:w-auto md:${isOpen ? "w-64" : "w-20"}`}
       >
         <div
           className={`p-6 flex items-center ${
@@ -98,18 +107,20 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
               <h1 className="text-xl font-bold">Latest Fitness</h1>
               <button
                 onClick={toggleSidebar}
-                className="text-white hover:text-gray-300 transition-transform duration-200"
+                className="text-white ml-8 hover:text-gray-300 transition-transform duration-200"
               >
                 <ChevronLeft size={24} />
               </button>
             </>
           ) : (
-            <button
-              onClick={toggleSidebar}
-              className="text-white hover:text-gray-300 transition-transform duration-200"
-            >
-              <ChevronRight size={24} />
-            </button>
+            !isMobile && (
+              <button
+                onClick={toggleSidebar}
+                className="text-white hover:text-gray-300 transition-transform duration-200"
+              >
+                <Menu size={24} />
+              </button>
+            )
           )}
         </div>
 
@@ -175,12 +186,6 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
         </div>
 
         <div className="p-4 border-t border-gray-700">
-          {/* <SidebarLink
-            to="/admin/help"
-            icon={<HelpCircle size={20} />}
-            text="Help & Support"
-            isOpen={isOpen}
-          /> */}
           <button
             onClick={openLogoutModal}
             className={`flex items-center px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors ${!isOpen ? "justify-center" : ""}`}
@@ -191,6 +196,14 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
           </button>
         </div>
       </div>
+
+      {/* Overlay for mobile when sidebar is open */}
+      {isMobile && isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-0"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (

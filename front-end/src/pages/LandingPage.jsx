@@ -12,7 +12,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <HeroSection />
+      <HeroSection /> 
       <AboutSection />
       <ServicesSection />
       <TeamSection />
