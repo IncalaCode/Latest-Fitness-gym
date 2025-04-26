@@ -125,8 +125,8 @@ const ServicesSection = () => {
   const pricingPlans = [
     {
       title: "Daily Plan",
-      price:  "300 ETB",
-      priceValue: 300,
+      price:  "700 ETB",
+      priceValue: 700,
       duration: 1,
       features: [
         "One-day full access",
