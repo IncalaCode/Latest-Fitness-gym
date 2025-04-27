@@ -103,7 +103,7 @@ const Footer = () => {
               <li className="flex items-start">
                 <FiClock className="mt-1 mr-3 text-red-500 flex-shrink-0" />
                 <span className="text-gray-400">
-                  <span className="font-medium">Gym:</span> 6:00 AM - 10:00 PM Daily<br />
+                  <span className="font-medium">Gym:</span> 5:00 AM - 12:00 PM Daily<br />
                   <span className="font-medium">Spa:</span> 10:00 AM - 8:00 PM Daily
                 </span>
               </li>
