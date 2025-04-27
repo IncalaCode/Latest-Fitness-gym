@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { gradients } from '../../utils/themeColors';
 
-const TestimonialCard = ({ name, text, image, rating }) => {
+const TestimonialCard = ({ name, text, rating }) => {
   // Generate stars based on rating
   const stars = Array.from({ length: 5 }, (_, i) => (
     <i 
@@ -15,11 +15,9 @@ const TestimonialCard = ({ name, text, image, rating }) => {
   return (
     <div className="bg-gray-800 rounded-lg p-4 sm:p-6 md:p-8 shadow-lg relative h-full">
       <div className="flex items-center mb-4 md:mb-6">
-        <img 
-          src={image} 
-          alt={name} 
-          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mr-3 sm:mr-4 border-2 border-red-500"
-        />
+        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 flex items-center justify-center mr-3 sm:mr-4">
+          <span className="text-white text-lg font-bold">{name.charAt(0)}</span>
+        </div>
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-white">{name}</h3>
           <div className="flex space-x-1 mt-1">
@@ -38,27 +36,23 @@ const TestimonialCard = ({ name, text, image, rating }) => {
 const TestimonialsSection = () => {
   const testimonials = [
     {
-      name: "Jennifer K.",
+      name: "Kaleb Adem",
       text: "Latest Fitness completely transformed my approach to working out. The trainers are knowledgeable and supportive, and the community keeps me motivated. I've lost 30 pounds and gained so much confidence!",
-      image: "/images/testimonial-1.jpg",
       rating: 5
     },
     {
-      name: "David M.",
+      name: "Abenezer Mengistu",
       text: "As someone who was intimidated by gyms, I can't believe how comfortable I feel at Latest Fitness. The staff is friendly, the equipment is top-notch, and the results speak for themselves.",
-      image: "/images/testimonial-2.jpg",
       rating: 5
     },
     {
-      name: "Sophia L.",
+      name: "Tigist Hailu",
       text: "The nutrition coaching combined with personal training has been a game-changer for me. I've not only reached my fitness goals but also learned sustainable habits that I can maintain long-term.",
-      image: "/images/testimonial-3.jpg",
       rating: 4
     },
     {
-      name: "Robert J.",
+      name: "Yonas Tadesse",
       text: "I've been a member of many gyms over the years, but Latest Fitness stands out for their attention to detail and personalized approach. The facilities are always clean and the atmosphere is motivating.",
-      image: "/images/testimonial-4.jpg",
       rating: 5
     }
   ];
@@ -201,7 +195,6 @@ const TestimonialsSection = () => {
                     <TestimonialCard 
                       name={testimonial.name}
                       text={testimonial.text}
-                      image={testimonial.image}
                       rating={testimonial.rating}
                     />
                   </div>

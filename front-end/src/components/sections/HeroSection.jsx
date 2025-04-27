@@ -8,7 +8,7 @@ const HeroSection = () => {
   // Array of background images
   const backgroundImages = [
     '/home/landingpageImage.JPG',
-    '/home/heroimg2.avif',
+    // '/home/heroimg2.avif',
     // '/images/hero/gym-hero-3.jpg',
     // '/images/hero/gym-hero-4.jpg'
   ];

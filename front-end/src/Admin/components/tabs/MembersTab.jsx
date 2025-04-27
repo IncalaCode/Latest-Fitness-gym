@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import useMembers from "../../../hooks/useMembers";
 import { IMAGE_URL } from "../../../config/config";
-import { ChevronRight, Phone, MapPin, AlertCircle, Calendar } from "lucide-react";
+import { ChevronRight, Phone, MapPin, AlertCircle, Calendar, UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function MembersTab({ rowsPerPage = 10 }) {
   const {
@@ -143,8 +144,17 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     <div className="p-2 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h2 className="text-xl font-bold mb-2 sm:mb-0">Members</h2>
-        <div className="text-sm text-gray-500">
-          Showing {members.length} of {totalPages * rowsPerPage} members
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-500">
+            Showing {members.length} of {totalPages * rowsPerPage} members
+          </div>
+          <Link 
+            to="/admin/add-member" 
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <UserPlus size={16} className="mr-2" />
+            Add Member
+          </Link>
         </div>
       </div>
 

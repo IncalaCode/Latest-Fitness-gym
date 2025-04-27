@@ -15,7 +15,7 @@ const LandingPage = () => {
       <HeroSection /> 
       <AboutSection />
       <ServicesSection />
-      <TeamSection />
+      {/* <TeamSection /> */}
       <TestimonialsSection />
       <ContactSection />
       <Footer />
