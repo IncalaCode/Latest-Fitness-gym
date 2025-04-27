@@ -12,6 +12,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from "./Admin/components/AdminDashboard";
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import PrivacyPolicy from './pages/legal/pp';
+import AddMemberPage from './Admin/components/AddMemberPage';
 
 function App() {
   return (
@@ -74,6 +75,12 @@ function App() {
           <Route path="/admin/profile" element={
             <ProtectedRoute allowed={['Admin']}>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/add-member" element={
+            <ProtectedRoute allowed={['Admin']}>
+              <AddMemberPage/>
             </ProtectedRoute>
           } />
 
