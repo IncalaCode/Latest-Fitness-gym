@@ -42,14 +42,14 @@ app.use((err, req, res, next) => {
 
 const startServer = async () => {
   try {
-    // const dbInfo = await db.initialize();
+    const dbInfo = await db.initialize();
     initScheduledTasks();
-    // app.listen(PORT, () => {
-    //   console.log(`🚀 Server running on port ${PORT}`);
-    //   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    //   console.log(`📚 Database: ${dbInfo.database} (${dbInfo.tableCount} tables)`);
-    //   console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-    // });
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📚 Database: ${dbInfo.database} (${dbInfo.tableCount} tables)`);
+      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+    });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
