@@ -5,7 +5,7 @@ const CheckIn = db.CheckIn;
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 
-const QR_SECRET_KEY = process.env.QR_SECRET_KEY || 'gym-membership-qr-secret-key';
+const QR_SECRET_KEY = process.env.QR_SECRET_KEY
 
 
 const safeFormatDate = (date, format = 'date', defaultValue = 'N/A') => {

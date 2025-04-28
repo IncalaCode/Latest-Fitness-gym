@@ -4,7 +4,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { z } from 'zod';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
 import { useSnackbar } from 'notistack';
-import { User, Mail, Phone, Calendar, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, Calendar, AlertTriangle, MapPin } from 'lucide-react';
 import { API_URL } from '../../../config/config';
 import { GET_HEADER } from '../../../config/config';
 
@@ -62,28 +62,35 @@ const AddMemberForm = () => {
     fullName: z.string().min(1, 'Full name is required'),
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(1, 'Confirm password is required'),
     phone: z.string().min(1, 'Phone number is required'),
     emergencyContact: z.string().min(1, 'Emergency contact is required'),
-    dateOfBirth: z.string().min(1, 'Date of birth is required')
+    dateOfBirth: z.string().min(1, 'Date of birth is required'),
+    address: z.string().min(1, 'Address is required')
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
   });
 
   const initialValues = {
     fullName: '',
     email: '',
     password: '',
+    confirmPassword: '',
     phone: '',
     emergencyContact: '',
-    dateOfBirth: ''
+    dateOfBirth: '',
+    address: ''
   };
 
   const handleSubmit = async (values, { resetForm }) => {
     try {
       // Create user data object with all required fields
-      const userData = {
-        ...values,
-        agreeToTerms: true,
-        role: 'member' // Set default role if needed
-      };
+      // Exclude confirmPassword as it's only for validation
+      const { confirmPassword, ...userData } = values;
+      
+      userData.agreeToTerms = true;
+      userData.role = 'member'; // Set default role if needed
       
       console.log("Submitting form with values:", userData);
       
@@ -191,6 +198,25 @@ const AddMemberForm = () => {
             </div>
             
             <div>
+              <label htmlFor="confirmPassword" className="block text-gray-300 mb-2">Confirm Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <AlertTriangle className="text-gray-500" />
+                </div>
+                <Field
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  className={`w-full bg-gray-700 border ${
+                    errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border-gray-600'
+                  } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
+                  placeholder="********"
+                />
+              </div>
+              <ErrorMessage name="confirmPassword" component="p" className="mt-1 text-sm text-red-500" />
+            </div>
+            
+            <div>
               <label htmlFor="phone" className="block text-gray-300 mb-2">Phone Number</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -226,6 +252,25 @@ const AddMemberForm = () => {
                 />
               </div>
               <ErrorMessage name="emergencyContact" component="p" className="mt-1 text-sm text-red-500" />
+            </div>
+            
+            <div>
+              <label htmlFor="address" className="block text-gray-300 mb-2">Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MapPin className="text-gray-500" />
+                </div>
+                <Field
+                  type="text"
+                  id="address"
+                  name="address"
+                  className={`w-full bg-gray-700 border ${
+                    errors.address && touched.address ? 'border-red-500' : 'border-gray-600'
+                  } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
+                  placeholder="123 Main St, Addis Ababa"
+                />
+              </div>
+              <ErrorMessage name="address" component="p" className="mt-1 text-sm text-red-500" />
             </div>
             
             <div>
