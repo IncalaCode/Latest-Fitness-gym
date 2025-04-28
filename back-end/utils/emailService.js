@@ -1,12 +1,21 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: process.env.EMAIL_SECURE === 'true',
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
+// Verify transporter connection on startup
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('SMTP connection error:', error);
+  } else {
+    console.log('SMTP server is ready to take our messages');
   }
 });
 
@@ -34,9 +43,12 @@ exports.sendWelcomeEmail = async (user) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent successfully:', result.messageId);
+    return result;
   } catch (error) {
     console.error('Error sending welcome email:', error);
+    throw error;
   }
 };
 
@@ -66,9 +78,12 @@ exports.sendPasswordResetEmail = async (user, token) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent successfully:', result.messageId);
+    return result;
   } catch (error) {
     console.error('Error sending password reset email:', error);
+    throw error;
   }
 };
 
@@ -131,6 +146,7 @@ exports.sendMembershipExpirationReminder = async (user, membership, daysRemainin
     };
 
     const result = await transporter.sendMail(mailOptions);
+    console.log('Membership expiration reminder sent successfully:', result.messageId);
     return result;
   } catch (error) {
     console.error('Error sending membership expiration reminder:', error);

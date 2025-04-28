@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL, GET_HEADER } from '../config/config';
 
 const useExpiringMemberships = () => {
   const [expiringMemberships, setExpiringMemberships] = useState([]);
@@ -10,7 +11,8 @@ const useExpiringMemberships = () => {
   const fetchExpiringMemberships = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/memberships/expiring');
+      const options = await GET_HEADER();
+      const response = await axios.get(`${API_URL}/memberships/expiring`, options);
       setExpiringMemberships(response.data.data);
       setError(null);
     } catch (err) {
@@ -23,7 +25,8 @@ const useExpiringMemberships = () => {
 
   const sendReminder = async (membershipId) => {
     try {
-      const response = await axios.post(`/api/memberships/reminder/${membershipId}`);
+      const options = await GET_HEADER();
+      const response = await axios.post(`${API_URL}/memberships/reminder/${membershipId}`, {}, options);
       return {
         success: true,
         message: response.data.message

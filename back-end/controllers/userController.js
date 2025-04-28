@@ -83,7 +83,7 @@ exports.register = async (req, res) => {
       agreeToTerms
     });
 
-    await sendWelcomeEmail(user);
+    // await sendWelcomeEmail(user);
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
@@ -130,7 +130,7 @@ exports.forgotPassword = async (req, res) => {
     user.forgetPasswordExpires = new Date(resetTokenExpiry);
     await user.save();
 
-    await sendPasswordResetEmail(user, resetToken);
+    // await sendPasswordResetEmail(user, resetToken);
 
     res.status(200).json({
       success: true,
