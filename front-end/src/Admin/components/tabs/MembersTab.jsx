@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import useMembers from "../../../hooks/useMembers";
 import { IMAGE_URL } from "../../../config/config";
-import { ChevronRight, Phone, MapPin, AlertCircle, Calendar, UserPlus } from "lucide-react";
+import { Phone, MapPin, AlertCircle, Calendar, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
+import PackageModal from "./member modals/PackageModal";
 
 export default function MembersTab({ rowsPerPage = 10 }) {
   const {
@@ -12,39 +13,53 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     currentPage,
     totalPages,
     handlePageChange,
-    refetch
+    refetch,
   } = useMembers(rowsPerPage);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if screen is mobile size
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 1024); // 1024px is the standard lg breakpoint
     };
-    
+
     // Check on initial load
     checkIfMobile();
-    
+
     // Add event listener for window resize
-    window.addEventListener('resize', checkIfMobile);
-    
+    window.addEventListener("resize", checkIfMobile);
+
     // Clean up
-    return () => window.removeEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
+
+  // Function to handle buy button click
+  const handleBuyClick = (member) => {
+    setSelectedMember(member);
+    setIsModalOpen(true);
+  };
+
+  // Function to close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedMember(null);
+  };
 
   // Function to render pagination controls
   const renderPagination = () => {
     const pages = [];
     const maxVisiblePages = isMobile ? 3 : 5;
-    
+
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
@@ -60,7 +75,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
         </button>
       );
     }
-    
+
     return (
       <div className="flex justify-center mt-6 flex-wrap">
         <button
@@ -74,11 +89,13 @@ export default function MembersTab({ rowsPerPage = 10 }) {
         >
           Previous
         </button>
-        
+
         {pages}
-        
+
         <button
-          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+          onClick={() =>
+            handlePageChange(Math.min(totalPages, currentPage + 1))
+          }
           disabled={currentPage === totalPages}
           className={`px-3 py-1 mx-1 my-1 rounded ${
             currentPage === totalPages
@@ -148,8 +165,8 @@ export default function MembersTab({ rowsPerPage = 10 }) {
           <div className="text-sm text-gray-500">
             Showing {members.length} of {totalPages * rowsPerPage} members
           </div>
-          <Link 
-            to="/admin/add-member" 
+          <Link
+            to="/admin/add-member"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <UserPlus size={16} className="mr-2" />
@@ -167,15 +184,15 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                 <div className="flex items-center">
                   {renderAvatar(member)}
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">{member.name}</div>
+                    <div className="font-medium text-gray-900">
+                      {member.name}
+                    </div>
                     <div className="text-gray-500 text-sm">{member.email}</div>
                   </div>
                 </div>
-                <div>
-                  {renderStatusBadge(member.status)}
-                </div>
+                <div>{renderStatusBadge(member.status)}</div>
               </div>
-              
+
               <div className="border-t border-gray-200 pt-3 space-y-2">
                 <div className="flex items-start">
                   <div className="text-gray-500 mr-2">
@@ -186,17 +203,19 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                     <div className="text-sm">{member.phone}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 mr-2">
                     <AlertCircle size={16} />
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Emergency Contact</div>
+                    <div className="text-xs text-gray-500">
+                      Emergency Contact
+                    </div>
                     <div className="text-sm">{member.emergencyContact}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 mr-2">
                     <MapPin size={16} />
@@ -206,7 +225,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                     <div className="text-sm">{member.address}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 mr-2">
                     <Calendar size={16} />
@@ -216,8 +235,23 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                     <div className="text-sm">{member.birthYear}</div>
                   </div>
                 </div>
+
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <Calendar size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Action</div>
+                    <button
+                      className="bg-green-500 text-white px-2 py-1 rounded cursor-pointer hover:bg-green-600 transition-colors"
+                      onClick={() => handleBuyClick(member)}
+                    >
+                      Buy
+                    </button>
+                  </div>
+                </div>
               </div>
-              
+
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="text-sm font-medium text-gray-700">
@@ -257,6 +291,9 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                 <th className="py-3 px-4 text-left text-sm font-medium text-gray-500">
                   Birth Year
                 </th>
+                <th className="py-3 px-4 text-left text-sm font-medium text-gray-500">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -291,15 +328,30 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                   <td className="py-4 px-4 text-sm text-gray-500">
                     {member.birthYear}
                   </td>
+                  <td className="py-4 px-4 text-sm">
+                    <button
+                      className="bg-green-500 text-white py-1 px-2 border-2 cursor-pointer hover:bg-green-600 transition-colors"
+                      onClick={() => handleBuyClick(member)}
+                    >
+                      Buy
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      
+
       {/* Pagination controls */}
       {totalPages > 1 && renderPagination()}
+
+      {/* Package Modal */}
+      <PackageModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        member={selectedMember}
+      />
     </div>
   );
 }
