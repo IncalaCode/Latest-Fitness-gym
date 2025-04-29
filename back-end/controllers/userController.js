@@ -197,7 +197,7 @@ exports.getAllUsers = async (req, res) => {
             [Op.gt]: new Date() // Only include active memberships (not expired)
           }
         },
-        attributes: ['userId', 'planTitle', 'expiryDate']
+        attributes: ['userId', 'planTitle', 'expiryDate' ,'qrCodeData']
       });
   
       const userPaymentMap = {};
@@ -217,6 +217,7 @@ exports.getAllUsers = async (req, res) => {
           userData.membership = userPayment.planTitle;
           userData.membershipStatus = 'active';
           userData.membershipExpiry = userPayment.expiryDate;
+          userData.qrcodeData = userPayment.qrCodeData
         } else {
           userData.membership = 'None';
           userData.membershipStatus = 'inactive';
