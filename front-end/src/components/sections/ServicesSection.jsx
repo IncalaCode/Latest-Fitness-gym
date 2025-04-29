@@ -110,13 +110,13 @@ const PricingCard = ({
           ))}
         </ul>
 
-        <PrimaryButton
+        {/* <PrimaryButton
           colorScheme={isPopular ? "redOrange" : "blueWhite"}
           className="w-full py-2.5 text-center text-sm font-medium"
           onClick={handleSelectPlan}
         >
           Select Plan
-        </PrimaryButton>
+        </PrimaryButton> */}
       </div>
     </motion.div>
   );

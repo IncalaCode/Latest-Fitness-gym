@@ -41,7 +41,11 @@ const useMembers = (rowsPerPage = 10) => {
             emergencyContact: user.emergencyContact || 'N/A',
             address: user.address || 'N/A',
             birthYear: birthYear,
-            photoUrl: user.photoUrl
+            photoUrl: user.photoUrl,
+            membership: user.membership,
+            membershipStatus: user.membershipStatus,
+            membershipExpiry: user.membershipExpiry,
+            qrcodeData: user.qrcodeData // Include QR code data from the API response
           };
         });
         

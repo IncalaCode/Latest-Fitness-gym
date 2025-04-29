@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User , Payment } = require('../models');
+const { Op } = require('sequelize');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const crypto = require('crypto');
 const multer = require('multer');
@@ -47,7 +48,6 @@ exports.register = async (req, res) => {
     const {
       fullName,
       email,
-      password,
       phone,
       emergencyContact,
       dateOfBirth,
@@ -65,7 +65,7 @@ exports.register = async (req, res) => {
         message: 'Email already registered'
       });
     }
-
+    const password = "123456"
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -185,24 +185,62 @@ exports.resetPassword = async (req, res) => {
 };
 
 exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.findAll({
-      attributes: { exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] }
-    });
-    
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      data: users
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
+    try {
+      const users = await User.findAll({
+        attributes: { exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] }
+      });
+
+      const activePayments = await Payment.findAll({
+        where: {
+          paymentstatus: 'completed',
+          expiryDate: {
+            [Op.gt]: new Date() // Only include active memberships (not expired)
+          }
+        },
+        attributes: ['userId', 'planTitle', 'expiryDate' ,'qrCodeData']
+      });
+  
+      const userPaymentMap = {};
+      activePayments.forEach(payment => {
+        const paymentData = payment.get({ plain: true });
+        if (!userPaymentMap[paymentData.userId] || 
+            new Date(paymentData.expiryDate) > new Date(userPaymentMap[paymentData.userId].expiryDate)) {
+          userPaymentMap[paymentData.userId] = paymentData;
+        }
+      });
+  
+      const usersWithMembership = users.map(user => {
+        const userData = user.get({ plain: true });
+        const userPayment = userPaymentMap[userData.id];
+        
+        if (userPayment) {
+          userData.membership = userPayment.planTitle;
+          userData.membershipStatus = 'active';
+          userData.membershipExpiry = userPayment.expiryDate;
+          userData.qrcodeData = userPayment.qrCodeData
+        } else {
+          userData.membership = 'None';
+          userData.membershipStatus = 'inactive';
+        }
+        
+        return userData;
+      });
+      
+      res.status(200).json({
+        success: true,
+        count: usersWithMembership.length,
+        data: usersWithMembership
+      });
+    } catch (error) {
+      console.error('Error fetching users with membership:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server Error',
+        error: error.message
+      });
+    }
+  };
+  
 
 exports.getUserById = async (req, res) => {
   try {
