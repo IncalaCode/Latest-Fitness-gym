@@ -44,44 +44,59 @@ export default function PackageModal({ isOpen, onClose, member }) {
   const downloadQRCode = () => {
     if (!qrCodeRef.current) return;
     
-    // Get the SVG element
-    const svgElement = qrCodeRef.current.querySelector('svg');
-    
-    // Create a canvas element
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Create an image from the SVG
-    const img = new Image();
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    img.onload = () => {
-      // Set canvas dimensions
-      canvas.width = img.width * 2; // Scale up for better quality
-      canvas.height = img.height * 2;
+    try {
+      // Get the SVG element
+      const svgElement = qrCodeRef.current.querySelector('svg');
+      
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Set canvas dimensions based on the SVG size
+      const svgRect = svgElement.getBoundingClientRect();
+      canvas.width = svgRect.width * 2; // Scale up for better quality
+      canvas.height = svgRect.height * 2;
       
       // Draw white background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw the image
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // Convert SVG to a data URL instead of a blob
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBase64 = btoa(unescape(encodeURIComponent(svgData)));
+      const dataURL = 'data:image/svg+xml;base64,' + svgBase64;
       
-      // Create download link
-      const downloadLink = document.createElement('a');
-      downloadLink.href = canvas.toDataURL('image/png');
-      downloadLink.download = `${member.name}-membership-qr.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+      // Create an image from the data URL
+      const img = new Image();
+      img.onload = () => {
+        // Draw the image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Get data URL directly from canvas (uses data: scheme which is allowed by CSP)
+        const pngDataUrl = canvas.toDataURL('image/png');
+        
+        // Create download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngDataUrl; // This is a data: URL, not a blob: URL
+        downloadLink.download = `${member.name}-membership-qr.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
       
-      // Clean up
-      URL.revokeObjectURL(url);
-    };
-    
-    img.src = url;
+      // Set the source to the data URL
+      img.src = dataURL;
+      
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      enqueueSnackbar("Failed to download QR code. Please try again.", {
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right',
+        }
+      });
+    }
   };
 
   const handleConfirm = async () => {
