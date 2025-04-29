@@ -222,13 +222,15 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
           Processing Payment
         </PrimaryButton>
       ) : (
-        <PrimaryButton 
+        
+        {/*   <PrimaryButton 
           colorScheme={isExpired ? "redOrange" : "blueWhite"} 
           className="w-full max-w-xs flex items-center justify-center"
           onClick={navigateToRenewMembership} // Function to navigate to the membership renewal page
         >
           {isRenewal ? 'Renew Membership' : 'Join Now'}
-        </PrimaryButton>
+        </PrimaryButton> */}
+
       )}
       </motion.div>
 

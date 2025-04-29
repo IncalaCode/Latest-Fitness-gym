@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User , Payment } = require('../models');
+const { Op } = require('sequelize');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const crypto = require('crypto');
 const multer = require('multer');
@@ -47,7 +48,6 @@ exports.register = async (req, res) => {
     const {
       fullName,
       email,
-      password,
       phone,
       emergencyContact,
       dateOfBirth,
@@ -65,7 +65,7 @@ exports.register = async (req, res) => {
         message: 'Email already registered'
       });
     }
-
+    const password = "123456"
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 

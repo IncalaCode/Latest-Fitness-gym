@@ -124,14 +124,6 @@ const calculateExpiryDate = (durationString, startDate = new Date()) => {
  */
 exports.createAdminPayment = async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        status: 'error',
-        message: 'Unauthorized. Admin access required.' 
-      });
-    }
-
     const { userId, planTitle, amount, gender, duration } = req.body;
 
     // Validate required fields

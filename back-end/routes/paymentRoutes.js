@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const {createAdminPayment} = require('../controllers/adminPaymentController');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -40,6 +41,6 @@ const upload = multer({
 
 router.post('/payinit', protect, paymentController.initializePayment);
 router.post('/uploadPaymentReceipt/:paymentId', protect, upload.single('receipt') ,paymentController.uploadPaymentReceipt);
-router.post("/adminPayment", protect, authorize('admin') , paymentController.adminPayment);
+router.post("/adminPayment", protect, authorize('admin') , createAdminPayment);
 
 module.exports = router;    
