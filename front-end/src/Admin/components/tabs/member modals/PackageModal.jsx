@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useSnackbar } from 'notistack';
 import PackageOption from "./PackageOption";
 import ConfirmationModal from "./ConfirmationModal";
+import { API_URL, GET_HEADER } from "../../../../config/config";
 
 export default function PackageModal({ isOpen, onClose, member }) {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [activeTab, setActiveTab] = useState("group");
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     if (isOpen) {
@@ -102,19 +105,43 @@ export default function PackageModal({ isOpen, onClose, member }) {
       };
 
       console.log("Sending payment data:", paymentData);
+      const headerConfig = await GET_HEADER({ isJson: true });
 
-      // Send the data to the API
-      const response = await axios.post("payment/adminPayment", paymentData);
+      // Send the data to the API using fetch instead of axios
+      const response = await fetch(`${API_URL}/payment/adminPayment`, {
+        method: 'POST',
+        headers: headerConfig.headers,
+        body: JSON.stringify(paymentData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Payment successful:", data);
 
-      console.log("Payment successful:", response.data);
-
-      // Show success message or redirect
-      alert("Payment processed successfully!");
+      // Show success message using notistack
+      enqueueSnackbar('Payment processed successfully!', { 
+        variant: 'success',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right',
+        }
+      });
 
       onClose();
     } catch (error) {
       console.error("Payment error:", error);
-      alert("Error processing payment. Please try again.");
+      
+      // Show error message using notistack
+      enqueueSnackbar('Error processing payment. Please try again.', { 
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right',
+        }
+      });
     }
   };
 
@@ -210,6 +237,14 @@ export default function PackageModal({ isOpen, onClose, member }) {
 
           {activeTab === "individual" && (
             <div className="grid gap-6 md:grid-cols-4">
+             <PackageOption
+                title="1 Day"
+                prices={{ men: "700", women: "700" }}
+                member={member}
+                onSelect={handleSelectPackage}
+                packageType="Individual Package"
+                duration="1 Day"
+              />
               <PackageOption
                 title="1 Month"
                 prices={{ men: "4,000", women: "3,500" }}

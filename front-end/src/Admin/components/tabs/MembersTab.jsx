@@ -110,17 +110,22 @@ export default function MembersTab({ rowsPerPage = 10 }) {
   };
 
   // Function to render member status badge
-  const renderStatusBadge = (status) => (
-    <span
-      className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-        status === "Active"
-          ? "bg-green-100 text-green-800"
-          : "bg-yellow-100 text-yellow-800"
-      }`}
-    >
-      {status}
-    </span>
-  );
+  const renderStatusBadge = (membershipStatus) => {
+    // Convert to lowercase for comparison since backend sends lowercase values
+    const status = typeof membershipStatus === 'string' ? membershipStatus.toLowerCase() : '';
+    
+    return (
+      <span
+        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+          status === "active"
+            ? "bg-green-100 text-green-800"
+            : "bg-yellow-100 text-yellow-800"
+        }`}
+      >
+        {status === "active" ? "Active" : "Inactive"}
+      </span>
+    );
+  };
 
   // Function to render member avatar
   const renderAvatar = (member) => (
@@ -190,7 +195,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                     <div className="text-gray-500 text-sm">{member.email}</div>
                   </div>
                 </div>
-                <div>{renderStatusBadge(member.status)}</div>
+                <div>{renderStatusBadge(member.membershipStatus)}</div>
               </div>
 
               <div className="border-t border-gray-200 pt-3 space-y-2">
@@ -255,7 +260,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <div className="text-sm font-medium text-gray-700">
-                    {member.membershipType}
+                    {member.membership}
                   </div>
                 </div>
               </div>
@@ -277,7 +282,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                   Membership Type
                 </th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-gray-500">
-                  Status
+                Membership Status
                 </th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-gray-500">
                   Phone
@@ -312,9 +317,9 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-sm">{member.membershipType}</td>
+                  <td className="py-4 px-4 text-sm">{member.membership}</td>
                   <td className="py-4 px-4">
-                    {renderStatusBadge(member.status)}
+                    {renderStatusBadge(member.membershipStatus)}
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-500">
                     {member.phone}
