@@ -440,7 +440,7 @@ export default function PackageModal({ isOpen, onClose, member }) {
             <div className="grid gap-6 md:grid-cols-1">
               <PackageOption
                 title="1 Month"
-                prices={{ men: "4,000", women: "3,500" }}
+                prices={{ men: "10,300", women: "9,030" }}
                 member={member}
                 onSelect={handleSelectPackage}
                 packageType="Family Package"
