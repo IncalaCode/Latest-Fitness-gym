@@ -1,0 +1,48 @@
+{
+  "name": "gym-backend",
+  "version": "1.0.0",
+  "description": "Backend API for gym",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "debug": "nodemon --inspect server.js",
+    "test": "jest",
+    "seed": "node seeder/index.js",
+    "migrate" : "npx sequelize-cli db:migrate",
+    "test-auth": "node test/test-auth.js"
+  },
+  "keywords": [
+    "student",
+    "management",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.18.2",
+    "helmet": "^6.1.5",
+    "jsonwebtoken": "^9.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.13.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.1",
+    "sequelize": "^6.37.6",
+    "sequelize-cli": "^6.6.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

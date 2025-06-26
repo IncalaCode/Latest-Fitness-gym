@@ -1,0 +1,20 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/latestfi/public_html
+    - export REPOPATH=/home/latestfi/cprepo
+    - echo "Deployment started at $(date)" > $DEPLOYPATH/deployment-log.txt
+    - /bin/cp -R $REPOPATH/back-end/dist/* $DEPLOYPATH
+    - /bin/cp -R $REPOPATH/back-end/dist/index.html $DEPLOYPATH/api/
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/cp $REPOPATH/back-end/server.js $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/config $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/migrations $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/routes $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/utils $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/models $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/seeder $DEPLOYPATH/api/
+    - /bin/cp -R $REPOPATH/back-end/controllers $DEPLOYPATH/api/
+    - /bin/cp $REPOPATH/back-end/package.json $DEPLOYPATH/api/
+    - /bin/cp $REPOPATH/back-end/.env $DEPLOYPATH/api/
+    - source /home/latestfi/nodevenv/latestfitnessethiopia.com/20/bin/activate && cd $DEPLOYPATH/api && npm install --production && npm run start
+    - echo "Deployment completed at $(date)" >> $DEPLOYPATH/deployment-log.txt
