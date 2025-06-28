@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSnackbar } from 'notistack';
-import { FiYoutube, FiHash } from 'react-icons/fi';
+import { FiYoutube, FiHash, FiUser } from 'react-icons/fi';
 import Navbar from '../../components/ui/Navbar';
 import ProfileCard from './components/ProfileCard';
 import CheckInCode from './components/CheckInCode';
@@ -35,7 +35,40 @@ const UserDashboard = () => {
       }
       
       const data = await response.json();
-      setDashboardData(data.data);
+      
+      // Validate and sanitize the data
+      if (data.data) {
+        // Ensure all required fields exist with fallbacks
+        const sanitizedData = {
+          userData: {
+            id: data.data.userData?.id || '',
+            fullName: data.data.userData?.fullName || 'Member',
+            email: data.data.userData?.email || '',
+            phone: data.data.userData?.phone || '',
+            emergencyContactName: data.data.userData?.emergencyContactName || '',
+            emergencyContactPhone: data.data.userData?.emergencyContactPhone || '',
+            emergencyContactRelationship: data.data.userData?.emergencyContactRelationship || '',
+            address: data.data.userData?.address || '',
+            fitnessGoals: data.data.userData?.fitnessGoals || '',
+            medicalConditions: data.data.userData?.medicalConditions || '',
+            photoUrl: data.data.userData?.photoUrl || '',
+            membershipStatus: data.data.userData?.membershipStatus || 'Inactive',
+            membershipType: data.data.userData?.membershipType || 'None',
+            expirationDate: data.data.userData?.expirationDate || '',
+            trainer: data.data.userData?.trainer || null
+          },
+          qrCodeData: data.data.qrCodeData || null,
+          stats: data.data.stats || {},
+          checkIns: data.data.checkIns || [],
+          hasPendingInCashPayment: data.data.hasPendingInCashPayment || false,
+          paymentMessage: data.data.paymentMessage || '',
+          isRenewal: data.data.isRenewal || false
+        };
+        
+        setDashboardData(sanitizedData);
+      } else {
+        throw new Error('Invalid dashboard data structure');
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       enqueueSnackbar('Failed to load dashboard data', { variant: 'error' });
@@ -51,9 +84,6 @@ const UserDashboard = () => {
   const handleCloseScanner = () => {
     setShowScanner(false);
   };
-
-
-
 
   // Animation variants
   const fadeIn = {
@@ -77,7 +107,7 @@ const UserDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen  flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-red-500"></div>
       </div>
     );
@@ -124,9 +154,45 @@ const UserDashboard = () => {
               <FiYoutube className="mr-2" />
               Scan Workout Video
             </motion.button>
-            
           </div>
         </div>
+
+        {/* Trainer Information Section */}
+        {userData?.trainer && (
+          <motion.div
+            className="mb-6 bg-gray-800 rounded-xl p-6 shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="flex items-center mb-4">
+              <FiUser className="text-blue-400 mr-2 text-xl" />
+              <h2 className="text-xl font-bold text-white">Your Trainer</h2>
+            </div>
+            <div className="flex items-center">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-700 mr-4">
+                {userData.trainer.photoUrl ? (
+                  <img 
+                    src={userData.trainer.photoUrl} 
+                    alt={userData.trainer.fullName} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-white text-lg font-bold">
+                      {userData.trainer.fullName?.split(' ').map(name => name[0]).join('') || 'T'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">{userData.trainer.fullName}</h3>
+                <p className="text-gray-400 text-sm">{userData.trainer.specialization || 'Personal Trainer'}</p>
+                <p className="text-gray-400 text-sm">{userData.trainer.email}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -169,8 +235,6 @@ const UserDashboard = () => {
         isOpen={showScanner} 
         onClose={handleCloseScanner} 
       />
-      
-
     </div>
   );
 };

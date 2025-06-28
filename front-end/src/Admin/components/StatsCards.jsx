@@ -24,7 +24,7 @@ export default function StatsCards({
         <div className="space-y-2">
           <p className="text-2xl font-bold">{value}</p>
           <p className="text-sm text-gray-600">{description}</p>
-          <p
+          {/* <p
             className={`text-sm ${
               change === 'New'
                 ? "text-blue-600"
@@ -32,11 +32,11 @@ export default function StatsCards({
                   ? "text-red-600"
                   : "text-green-600"
             } font-medium`}
-          >
-            {change === 'New'
+          > */}
+            {/* {change === 'New'
               ? "New activity"
               : `${change} from earlier period`}
-          </p>
+          </p> */}
         </div>
       </div>
     </motion.div>

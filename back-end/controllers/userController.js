@@ -48,6 +48,7 @@ exports.register = async (req, res) => {
     const {
       fullName,
       email,
+      password,
       phone,
       emergencyContactName,
       emergencyContactPhone,
@@ -67,9 +68,11 @@ exports.register = async (req, res) => {
         message: 'Email already registered'
       });
     }
-    const password = "123456"
+    
+    // Use provided password or default to "123456"
+    const userPassword = password || "123456";
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(userPassword, salt);
 
     const user = await User.create({
       fullName,
@@ -84,7 +87,8 @@ exports.register = async (req, res) => {
       fitnessGoals,
       medicalConditions,
       photoUrl,
-      agreeToTerms
+      agreeToTerms,
+      emergencyContact : ""
     });
 
     // await sendWelcomeEmail(user);
@@ -299,11 +303,35 @@ exports.updateUser = async (req, res) => {
       });
     }
 
-    if (req.body.password) {
+    // Handle password update with current password verification
+    if (req.body.newPassword) {
+      // Check if current password is provided
+      if (!req.body.currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is required to update password'
+        });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(req.body.currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      }
+
+      // Hash new password
       const salt = await bcrypt.genSalt(10);
-      req.body.password = await bcrypt.hash(req.body.password, salt);
+      req.body.password = await bcrypt.hash(req.body.newPassword, salt);
+      
+      // Remove the newPassword and currentPassword from req.body
+      delete req.body.newPassword;
+      delete req.body.currentPassword;
     }
 
+    // Handle profile photo upload
     if (req.file) {
       if (user.photoUrl) {
         const oldPhotoPath = path.join(__dirname, '..', user.photoUrl.replace(/^\//, ''));
@@ -314,14 +342,24 @@ exports.updateUser = async (req, res) => {
       req.body.photoUrl = `/${req.file.path.replace(/\\/g, '/')}`;
     }
 
+    // Update user with all fields including emergency contact fields
     await user.update(req.body);
 
     res.status(200).json({
       success: true,
+      message: 'Profile updated successfully',
       data: {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
+        phone: user.phone,
+        emergencyContactName: user.emergencyContactName,
+        emergencyContactPhone: user.emergencyContactPhone,
+        emergencyContactRelationship: user.emergencyContactRelationship,
+        dateOfBirth: user.dateOfBirth,
+        address: user.address,
+        fitnessGoals: user.fitnessGoals,
+        medicalConditions: user.medicalConditions,
         role: user.role,
         photoUrl: user.photoUrl
       }

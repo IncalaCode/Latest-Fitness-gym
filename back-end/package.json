@@ -9,7 +9,7 @@
     "debug": "nodemon --inspect server.js",
     "test": "jest",
     "seed": "node seeder/index.js",
-    "migrate" : "npx sequelize-cli db:migrate",
+    "migrate": "npx sequelize-cli db:migrate",
     "test-auth": "node test/test-auth.js"
   },
   "keywords": [
@@ -34,6 +34,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
     "sequelize": "^6.37.6",
+    "sequelize-auto-migrations": "^1.0.3",
     "sequelize-cli": "^6.6.2",
     "uuid": "^11.1.0"
   },

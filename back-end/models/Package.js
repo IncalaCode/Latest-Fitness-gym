@@ -75,7 +75,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Package.associate = function(models) {
     Package.hasMany(models.Payment, {
-      foreignKey: 'packageId',
+      foreignKey: 'productId',
       as: 'payments'
     });
   };

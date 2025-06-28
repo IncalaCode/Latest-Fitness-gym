@@ -21,7 +21,9 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
     fullName: userData?.fullName || '',
     email: userData?.email || '',
     phone: userData?.phone || '',
-    emergencyContact: userData?.emergencyContact || '',
+    emergencyContactName: userData?.emergencyContactName || '',
+    emergencyContactPhone: userData?.emergencyContactPhone || '',
+    emergencyContactRelationship: userData?.emergencyContactRelationship || '',
     address: userData?.address || '',
     fitnessGoals: userData?.fitnessGoals || '',
     medicalConditions: userData?.medicalConditions || '',
@@ -36,7 +38,9 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
     fullName: z.string().min(1, 'Full name is required'),
     email: z.string().email('Invalid email address'),
     phone: z.string().min(1, 'Phone number is required'),
-    emergencyContact: z.string().optional(),
+    emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
+    emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
+    emergencyContactRelationship: z.string().min(1, 'Emergency contact relationship is required'),
     address: z.string().optional(),
     fitnessGoals: z.string().optional(),
     medicalConditions: z.string().optional(),
@@ -119,7 +123,9 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
     const profileData = {
       fullName: values.fullName,
       phone: values.phone,
-      emergencyContact: values.emergencyContact,
+      emergencyContactName: values.emergencyContactName,
+      emergencyContactPhone: values.emergencyContactPhone,
+      emergencyContactRelationship: values.emergencyContactRelationship,
       address: values.address,
       fitnessGoals: values.fitnessGoals,
       medicalConditions: values.medicalConditions,
@@ -163,9 +169,11 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
           {/* Modal Body */}
           <div className="p-6">
             <Formik
+              key={userData?.id || 'new'}
               initialValues={initialValues}
               validationSchema={toFormikValidationSchema(validationSchema)}
               onSubmit={handleSubmit}
+              enableReinitialize={true}
             >
               {({ isSubmitting, values, setFieldValue, errors, touched }) => (
                 <Form className="space-y-5">
@@ -267,22 +275,58 @@ const EditProfileModal = ({isOpen, onClose, userData, onSubmit, isLoading }) => 
                       <ErrorMessage name="phone" component="p" className="mt-1 text-sm text-red-500" />
                     </div>
 
-                    {/* Emergency Contact */}
+                    {/* Emergency Contact Name */}
                     <div>
-                  <label htmlFor="emergencyContact" className="block text-gray-300 mb-2">Emergency Contact</label>
+                      <label htmlFor="emergencyContactName" className="block text-gray-300 mb-2">Emergency Contact Name</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FiUser className="text-gray-500" />
+                        </div>
+                        <Field
+                          type="text"
+                          id="emergencyContactName"
+                          name="emergencyContactName"
+                          className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <ErrorMessage name="emergencyContactName" component="p" className="mt-1 text-sm text-red-500" />
+                    </div>
+
+                    {/* Emergency Contact Phone */}
+                    <div>
+                      <label htmlFor="emergencyContactPhone" className="block text-gray-300 mb-2">Emergency Contact Phone</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <FiPhone className="text-gray-500" />
                         </div>
                         <Field
                           type="tel"
-                          id="emergencyContact"
-                          name="emergencyContact"
+                          id="emergencyContactPhone"
+                          name="emergencyContactPhone"
                           className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                           placeholder="+251 911 123 456"
                         />
                       </div>
-                      <ErrorMessage name="emergencyContact" component="p" className="mt-1 text-sm text-red-500" />
+                      <ErrorMessage name="emergencyContactPhone" component="p" className="mt-1 text-sm text-red-500" />
+                    </div>
+
+                    {/* Emergency Contact Relationship */}
+                    <div>
+                      <label htmlFor="emergencyContactRelationship" className="block text-gray-300 mb-2">Emergency Contact Relationship</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <FiUser className="text-gray-500" />
+                        </div>
+                        <Field
+                          type="text"
+                          id="emergencyContactRelationship"
+                          name="emergencyContactRelationship"
+                          className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                          placeholder="Mother, Father, Spouse, etc."
+                        />
+                      </div>
+                      <ErrorMessage name="emergencyContactRelationship" component="p" className="mt-1 text-sm text-red-500" />
                     </div>
                   </div>
 

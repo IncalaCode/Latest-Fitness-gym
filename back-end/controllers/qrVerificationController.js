@@ -1,6 +1,5 @@
-const { Op } = require('sequelize');
-const { User, Payment, CheckIn } = require('../models');
-const crypto = require('crypto');
+const { Op, where } = require('sequelize');
+const { User, Payment, CheckIn , Package} = require('../models');
 
 /**
  * Verify QR code and process accordingly
@@ -155,6 +154,43 @@ async function handleCheckIn(req, res, user, payment, qrData) {
     payment.totalPasses -= 1;
     await payment.save();
   }
+const package = await Package.findOne({
+  where: {
+      id: payment.productId,
+  }})
+
+if (!package) {
+  return res.status(400).json({
+    success: false,
+    message: 'Package not found'
+  });
+}
+
+// Check access level restrictions if not full access
+if (package.accessLevel !== 'full') {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinutes = now.getMinutes();
+  
+  // Convert package times to comparable format
+  const [startHour, startMin] = package.startTime.split(':').map(Number);
+  const [endHour, endMin] = package.endTime.split(':').map(Number);
+  
+  // Check if current time is within allowed window
+  if (currentHour < startHour ||
+      (currentHour === startHour && currentMinutes < startMin) ||
+      currentHour > endHour ||
+      (currentHour === endHour && currentMinutes > endMin)) {
+    return res.status(400).json({
+      success: false,
+      message: `Access not allowed at this time. Package access hours: ${package.startTime} - ${package.endTime}`,
+      currentTime: now.toTimeString().slice(0,5),
+      allowedHours: `${package.startTime} - ${package.endTime}`
+    });
+  }
+}
+
+
 
   // Check if user has already checked in today
   const startOfDay = new Date();

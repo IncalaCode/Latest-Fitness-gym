@@ -180,7 +180,9 @@ const RegisterPage = () => {
                         </div>
                         
                         <div>
-                          <label htmlFor="password" className="block text-gray-300 mb-2">Password</label>
+                          <label htmlFor="password" className="block text-gray-300 mb-2">
+                            Password (Optional - Default: 123456)
+                          </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <FiUser className="text-gray-500" />
@@ -192,14 +194,16 @@ const RegisterPage = () => {
                               className={`w-full bg-gray-700 border ${
                                 errors.password && touched.password ? 'border-red-500' : 'border-gray-600'
                               } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
-                              placeholder="********"
+                              placeholder="Leave empty for default password"
                             />
                           </div>
                           <ErrorMessage name="password" component="p" className="mt-1 text-sm text-red-500" />
                         </div>
                         
                         <div>
-                          <label htmlFor="confirmPassword" className="block text-gray-300 mb-2">Confirm Password</label>
+                          <label htmlFor="confirmPassword" className="block text-gray-300 mb-2">
+                            Confirm Password (Optional)
+                          </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <FiUser className="text-gray-500" />
@@ -211,7 +215,7 @@ const RegisterPage = () => {
                               className={`w-full bg-gray-700 border ${
                                 errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border-gray-600'
                               } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
-                              placeholder="********"
+                              placeholder="Leave empty for default password"
                             />
                           </div>
                           <ErrorMessage name="confirmPassword" component="p" className="mt-1 text-sm text-red-500" />
@@ -236,23 +240,63 @@ const RegisterPage = () => {
                           <ErrorMessage name="phone" component="p" className="mt-1 text-sm text-red-500" />
                         </div>
                         
+                        <h3 className="text-xl font-semibold text-white mb-4 mt-6">Emergency Contact Information</h3>
+                        
                         <div>
-                          <label htmlFor="emergencyContact" className="block text-gray-300 mb-2">Emergency Contact</label>
+                          <label htmlFor="emergencyContactName" className="block text-gray-300 mb-2">Emergency Contact Name</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiUser className="text-gray-500" />
+                            </div>
+                            <Field
+                              type="text"
+                              id="emergencyContactName"
+                              name="emergencyContactName"
+                              className={`w-full bg-gray-700 border ${
+                                errors.emergencyContactName && touched.emergencyContactName ? 'border-red-500' : 'border-gray-600'
+                              } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
+                              placeholder="John Doe"
+                            />
+                          </div>
+                          <ErrorMessage name="emergencyContactName" component="p" className="mt-1 text-sm text-red-500" />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="emergencyContactPhone" className="block text-gray-300 mb-2">Emergency Contact Phone</label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <FiPhone className="text-gray-500" />
                             </div>
                             <Field
                               type="tel"
-                              id="emergencyContact"
-                              name="emergencyContact"
+                              id="emergencyContactPhone"
+                              name="emergencyContactPhone"
                               className={`w-full bg-gray-700 border ${
-                                errors.emergencyContact && touched.emergencyContact ? 'border-red-500' : 'border-gray-600'
+                                errors.emergencyContactPhone && touched.emergencyContactPhone ? 'border-red-500' : 'border-gray-600'
                               } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
                               placeholder="+251911123456"
                             />
                           </div>
-                          <ErrorMessage name="emergencyContact" component="p" className="mt-1 text-sm text-red-500" />
+                          <ErrorMessage name="emergencyContactPhone" component="p" className="mt-1 text-sm text-red-500" />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="emergencyContactRelationship" className="block text-gray-300 mb-2">Relationship to Emergency Contact</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiUser className="text-gray-500" />
+                            </div>
+                            <Field
+                              type="text"
+                              id="emergencyContactRelationship"
+                              name="emergencyContactRelationship"
+                              className={`w-full bg-gray-700 border ${
+                                errors.emergencyContactRelationship && touched.emergencyContactRelationship ? 'border-red-500' : 'border-gray-600'
+                              } rounded-lg py-3 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-red-500`}
+                              placeholder="Spouse, Parent, Sibling, etc."
+                            />
+                          </div>
+                          <ErrorMessage name="emergencyContactRelationship" component="p" className="mt-1 text-sm text-red-500" />
                         </div>
                         
                         <div>

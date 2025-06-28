@@ -13,10 +13,13 @@ const registrationSchema = z.object({
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  confirmPassword: z.string(),
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+    .optional(),
+  confirmPassword: z.string().optional(),
   phone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Please enter a valid phone number'),
-  emergencyContact: z.string().regex(/^\+?[0-9]{10,15}$/, 'Please enter a valid emergency contact number'),
+  emergencyContactName: z.string().min(2, 'Emergency contact name is required'),
+  emergencyContactPhone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Please enter a valid emergency contact number'),
+  emergencyContactRelationship: z.string().min(2, 'Emergency contact relationship is required'),
   dateOfBirth: z.string().refine(date => {
     const today = new Date();
     const birthDate = new Date(date);
@@ -30,7 +33,12 @@ const registrationSchema = z.object({
   agreeToTerms: z.boolean().refine(val => val === true, {
     message: 'You must agree to the terms and conditions'
   })
-}).refine(data => data.password === data.confirmPassword, {
+}).refine(data => {
+  if (data.password && data.confirmPassword) {
+    return data.password === data.confirmPassword;
+  }
+  return true;
+}, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
 });
@@ -48,7 +56,9 @@ const useRegistration = () => {
     password: '',
     confirmPassword: '',
     phone: '',
-    emergencyContact: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: '',
     dateOfBirth: '',
     address: '',
     fitnessGoals: '',

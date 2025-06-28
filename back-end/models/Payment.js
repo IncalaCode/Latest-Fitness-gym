@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'External product/package reference ID'
     },
+    
     userId: {
       type: DataTypes.UUID,
       allowNull: false
