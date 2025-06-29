@@ -240,7 +240,8 @@ exports.getDashboardData = async (req, res) => {
       membershipType: activePayment ? activePayment.planTitle : 
                       pendingInCashPayment ? `${pendingInCashPayment.planTitle} (Pending)` : 'None',
       membershipStatus: membershipStatus,
-      expirationDate: safeFormatDate(expirationDate, 'date', 'N/A')
+      expirationDate: safeFormatDate(expirationDate, 'date', 'N/A'),
+      totalPasses: activePayment ? (activePayment.totalPasses || 0) : 0
     };
     
     const formattedCheckIns = checkIns.map(checkIn => {

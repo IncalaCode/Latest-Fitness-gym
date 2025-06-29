@@ -548,8 +548,7 @@ exports.getFilterOptions = async (req, res) => {
         ],
         sortOptions: [
           { value: 'fullName', label: 'Name (A-Z)' },
-          { value: 'createdAt', label: 'Recently Registered' },
-          { value: 'membershipExpiry', label: 'Expiry Date' }
+          { value: 'createdAt', label: 'Recently Registered' }
         ]
       }
     });

@@ -611,7 +611,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                 <Grid container spacing={2}>
                   {/* Package Type Filter */}
                   <Grid item xs={12} sm={6} md={4}>
-                    <FormControl fullWidth size="small">
+                    <FormControl sx={{ minWidth: 120 }} fullWidth size="small">
                       <InputLabel>Package Type</InputLabel>
                       <Select
                         value={filters.packageId}
@@ -628,7 +628,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
 
                   {/* Expiration Status Filter */}
                   <Grid item xs={12} sm={6} md={4}>
-                    <FormControl fullWidth size="small">
+                    <FormControl fullWidth sx={{ minWidth: 120 }} size="small">
                       <InputLabel>Status</InputLabel>
                       <Select
                         value={filters.expirationStatus}
@@ -665,7 +665,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
 
                   {/* Sort Order */}
                   <Grid item xs={12} sm={6} md={4}>
-                    <FormControl fullWidth size="small">
+                    <FormControl sx={{ minWidth: 120 }} fullWidth size="small">
                       <InputLabel>Order</InputLabel>
                       <Select
                         value={filters.sortOrder}
@@ -1046,9 +1046,11 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
               fullWidth
               margin="normal"
             >
-              {packages.map(pkg => (
-                <MenuItem key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price} ETB</MenuItem>
-              ))}
+              {packages
+                .filter(pkg => pkg.isActive !== false)
+                .map(pkg => (
+                  <MenuItem key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price} ETB</MenuItem>
+                ))}
             </TextField>
           </div>
         </DialogContent>

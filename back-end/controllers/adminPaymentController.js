@@ -44,79 +44,10 @@ const generatePermanentQRData = (payment, user) => {
  * - "1y3m" (1 year and 3 months)
  * - "1.5y" (1.5 years)
  */
-const calculateExpiryDate = (durationString, startDate = new Date()) => {
-  const expiryDate = new Date(startDate);
-  
-  // If no duration provided, default to 30 days
-  if (!durationString) {
-    expiryDate.setDate(expiryDate.getDate() + 30);
-    return expiryDate;
-  }
-  
-  // Handle decimal notation (e.g., "1.5y")
-  if (/^\d+\.\d+[ymwdh]$/.test(durationString)) {
-    const unit = durationString.slice(-1);
-    const value = parseFloat(durationString.slice(0, -1));
-    
-    switch (unit) {
-      case 'h':
-        expiryDate.setTime(expiryDate.getTime() + value * 60 * 60 * 1000);
-        break;
-      case 'd':
-        expiryDate.setTime(expiryDate.getTime() + value * 24 * 60 * 60 * 1000);
-        break;
-      case 'w':
-        expiryDate.setTime(expiryDate.getTime() + value * 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'm':
-        // For partial months, calculate days (assuming 30 days per month)
-        const fullMonths = Math.floor(value);
-        const remainingDays = Math.round((value - fullMonths) * 30);
-        expiryDate.setMonth(expiryDate.getMonth() + fullMonths);
-        expiryDate.setDate(expiryDate.getDate() + remainingDays);
-        break;
-      case 'y':
-        // For partial years, calculate months and days
-        const fullYears = Math.floor(value);
-        const remainingMonths = Math.floor((value - fullYears) * 12);
-        const extraDays = Math.round(((value - fullYears) * 12 - remainingMonths) * 30);
-        expiryDate.setFullYear(expiryDate.getFullYear() + fullYears);
-        expiryDate.setMonth(expiryDate.getMonth() + remainingMonths);
-        expiryDate.setDate(expiryDate.getDate() + extraDays);
-        break;
-    }
-    
-    return expiryDate;
-  }
-  
-  // Handle combined format (e.g., "1y3m2w")
+const calculateExpiryDate = (durationString) => {
   const regex = /(\d+)([ymwdh])/g;
-  let match;
-  
-  while ((match = regex.exec(durationString)) !== null) {
-    const value = parseInt(match[1]);
-    const unit = match[2];
-    
-    switch (unit) {
-      case 'h':
-        expiryDate.setTime(expiryDate.getTime() + value * 60 * 60 * 1000);
-        break;
-      case 'd':
-        expiryDate.setDate(expiryDate.getDate() + value);
-        break;
-      case 'w':
-        expiryDate.setDate(expiryDate.getDate() + (value * 7));
-        break;
-      case 'm':
-        expiryDate.setMonth(expiryDate.getMonth() + value);
-        break;
-      case 'y':
-        expiryDate.setFullYear(expiryDate.getFullYear() + value);
-        break;
-    }
-  }
-  
-  return expiryDate;
+  let match = regex.exec(durationString)
+  return  parseInt(match[1]) ;
 };
 
 /**
@@ -160,7 +91,7 @@ exports.createAdminPayment = async (req, res) => {
     
     // Calculate payment and expiry dates
     const paymentDate = new Date();
-    const expiryDate = calculateExpiryDate(duration, paymentDate);
+    const expiryDate =  new Date(paymentDate.getTime() + calculateExpiryDate(duration) * 24 * 60 * 60 * 1000);
 
     // Create the payment record
     const payment = await Payment.create({
