@@ -98,6 +98,11 @@ const ProfileCard = ({ fetchDashboardData , userData, variants }) => {
           <span className="text-gray-400">Expires</span>
           <span className="text-white">{expirationDate}</span>
         </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-gray-400">Passes</span>
+          <span className="text-white">{userData?.totalPasses || 0}</span>
+        </div>
       </div>
       
       {/* Action Buttons */}

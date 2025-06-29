@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import useMembers from "../../../hooks/useMembers";
+import useFilterOptions from "../../../hooks/useFilterOptions";
 import { IMAGE_URL, API_URL } from "../../../config/config";
-import { Phone, MapPin, AlertCircle, Calendar, UserPlus, QrCode, Snowflake } from "lucide-react";
+import { Phone, MapPin, AlertCircle, Calendar, UserPlus, QrCode, Snowflake, Search, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from 'qrcode.react';
 import { useSnackbar } from 'notistack';
@@ -30,22 +31,36 @@ import {
   DialogContent,
   DialogActions,
   FormControlLabel,
-  MenuItem
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
+  Card,
+  CardContent,
+  Typography
 } from '@mui/material';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export default function MembersTab({ rowsPerPage = 10 }) {
+export default function MembersTabUpdated({ rowsPerPage = 10 }) {
   const {
     members,
     loading,
     error,
     currentPage,
     totalPages,
+    totalMembers,
+    filters,
     handlePageChange,
+    updateFilters,
+    handleSearch,
+    handleSort,
     refetch,
     reassignOrRemoveTrainer
   } = useMembers(rowsPerPage);
+  
+  const { filterOptions, loading: filterOptionsLoading } = useFilterOptions();
   const { trainers } = useTrainers();
   const { packages } = usePackages();
 
@@ -64,23 +79,11 @@ export default function MembersTab({ rowsPerPage = 10 }) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const bulkDeleteTimeoutRef = useRef(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
-
-  const memberFieldOptions = [
-    { id: 'name', label: 'Name' },
-    { id: 'email', label: 'Email' },
-    { id: 'membership', label: 'Membership Type' },
-    { id: 'membershipStatus', label: 'Membership Status' },
-    { id: 'phone', label: 'Phone' },
-    { id: 'emergencyContact', label: 'Emergency Contact' },
-    { id: 'address', label: 'Address' },
-    { id: 'birthYear', label: 'Birth Year' }
-  ];
+  const [showFilters, setShowFilters] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     format: 'csv',
-    fields: memberFieldOptions.map(f => f.id)
+    fields: ['name', 'email', 'membership', 'membershipStatus', 'phone', 'emergencyContact', 'address', 'birthYear']
   });
 
   const [trainerModalOpen, setTrainerModalOpen] = useState(false);
@@ -92,21 +95,43 @@ export default function MembersTab({ rowsPerPage = 10 }) {
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
+  // Action modal state
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [selectedMemberForAction, setSelectedMemberForAction] = useState(null);
+
   // Check if screen is mobile size
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // 1024px is the standard lg breakpoint
+      setIsMobile(window.innerWidth < 1024);
     };
 
-    // Check on initial load
     checkIfMobile();
-
-    // Add event listener for window resize
     window.addEventListener("resize", checkIfMobile);
-
-    // Clean up
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
+
+  // Handle search input change with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(search);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
+  // Filter functions
+  const handleFilterChange = (filterType, value) => {
+    updateFilters({ [filterType]: value });
+  };
+
+  const clearFilters = () => {
+    updateFilters({
+      packageId: '',
+      expirationStatus: '',
+      sortBy: 'fullName',
+      sortOrder: 'asc'
+    });
+  };
 
   // Function to handle buy button click
   const handleBuyClick = (member) => {
@@ -118,7 +143,6 @@ export default function MembersTab({ rowsPerPage = 10 }) {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedMember(null);
-    // Refresh the members list to show updated membership status
     refetch();
   };
 
@@ -128,11 +152,9 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     setLoadingQrCode(true);
 
     try {
-      // Use QR code data from the member object (from getAllUsers)
       if (member.qrcodeData) {
         setQrCodeData(member.qrcodeData);
       } else {
-        // Create a fallback QR code with member information if no QR code data exists
         const qrCodeInfo = {
           memberId: member.id,
           name: member.name,
@@ -178,7 +200,6 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     setSelectedMember(null);
     setIsFrozen(false);
 
-    // Refresh the members list if the operation was successful
     if (success) {
       refetch();
     }
@@ -189,49 +210,36 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     if (!qrCodeRef.current) return;
 
     try {
-      // Get the SVG element
       const svgElement = qrCodeRef.current.querySelector('svg');
-
-      // Create a canvas element
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      // Set canvas dimensions
       const svgRect = svgElement.getBoundingClientRect();
-      canvas.width = svgRect.width * 2; // Scale up for better quality
+      canvas.width = svgRect.width * 2;
       canvas.height = svgRect.height * 2;
 
-      // Draw white background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Convert SVG to a data URL instead of a blob
       const svgData = new XMLSerializer().serializeToString(svgElement);
-      // Use TextEncoder and TextDecoder instead of unescape
       const encoder = new TextEncoder();
       const decoder = new TextDecoder('utf-8');
       const svgBase64 = btoa(decoder.decode(encoder.encode(svgData)));
       const dataURL = 'data:image/svg+xml;base64,' + svgBase64;
 
-      // Create an image from the data URL
       const img = new Image();
       img.onload = () => {
-        // Draw the image
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // Get data URL directly from canvas (uses data: scheme which is allowed by CSP)
         const pngDataUrl = canvas.toDataURL('image/png');
 
-        // Create download link
         const downloadLink = document.createElement('a');
-        downloadLink.href = pngDataUrl; // This is a data: URL, not a blob: URL
+        downloadLink.href = pngDataUrl;
         downloadLink.download = `${selectedMember.name}-membership-qr.png`;
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
       };
 
-      // Set the source to the data URL
       img.src = dataURL;
 
     } catch (error) {
@@ -311,7 +319,6 @@ export default function MembersTab({ rowsPerPage = 10 }) {
 
   // Function to render member status badge
   const renderStatusBadge = (membershipStatus, isFrozen) => {
-    // Convert to lowercase for comparison since backend sends lowercase values
     const status = typeof membershipStatus === 'string' ? membershipStatus.toLowerCase() : '';
 
     if (status === "active" && isFrozen) {
@@ -337,83 +344,17 @@ export default function MembersTab({ rowsPerPage = 10 }) {
 
   // Function to render action buttons based on membership status
   const renderActionButtons = (member) => {
-    const isActive = member.membershipStatus && member.membershipStatus.toLowerCase() === 'active';
-    const hasQrCode = member.qrcodeData || isActive; // Show QR button if active or has QR code data
-    const isFrozen = member.isFrozen; // Check if membership is frozen
-
     return (
-      <div className="flex flex-col gap-2">
-        {/* First Row - Membership Management Buttons */}
-        <div className="flex gap-1">
-          {!isActive && (
-            <button
-              className="bg-green-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-green-600 transition-colors flex items-center"
-              onClick={() => handleBuyClick(member)}
-              title="Buy membership"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-              </svg>
-              Buy
-            </button>
-          )}
-          {isActive && !isFrozen && (
-            <button
-              className="bg-cyan-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-cyan-600 transition-colors flex items-center"
-              onClick={() => handleFreezeClick(member, false)}
-              title="Freeze membership"
-            >
-              <Snowflake size={14} className="mr-1" />
-              Freeze
-            </button>
-          )}
-          {isActive && isFrozen && (
-            <button
-              className="bg-orange-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-orange-600 transition-colors flex items-center"
-              onClick={() => handleFreezeClick(member, true)}
-              title="Unfreeze membership"
-            >
-              <Snowflake size={14} className="mr-1" />
-              Unfreeze
-            </button>
-          )}
-          {/* Trainer reassign/remove button */}
-          <button
-            className="bg-purple-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-purple-600 transition-colors flex items-center"
-            onClick={() => handleTrainerModalOpen(member)}
-            title="Reassign/Remove Trainer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
-            </svg>
-            Trainer
-          </button>
-        </div>
-
-        {/* Second Row - QR Code and Upgrade Buttons */}
-        <div className="flex gap-1">
-          {/* QR Code Button */}
-          {hasQrCode && (
-            <button
-              className="bg-blue-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-blue-600 transition-colors flex items-center"
-              onClick={() => handleQrCodeClick(member)}
-              title="View QR code"
-            >
-              <QrCode size={14} className="mr-1" />
-              QR Code
-            </button>
-          )}
-          {/* Upgrade Package Button */}
-          <button
-            className="bg-yellow-500 text-white py-1 px-3 rounded-md cursor-pointer hover:bg-yellow-600 transition-colors flex items-center"
-            onClick={() => handleUpgradeClick(member)}
-            title="Upgrade Package"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Upgrade
-          </button>
-        </div>
-      </div>
+      <button
+        className="bg-blue-500 text-white py-2 px-4 rounded-md cursor-pointer hover:bg-blue-600 transition-colors flex items-center"
+        onClick={() => handleActionModalOpen(member)}
+        title="View actions"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+        </svg>
+        Actions
+      </button>
     );
   };
 
@@ -434,27 +375,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     </div>
   );
 
-  const handleSort = (property) => {
-    if (sortBy === property) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(property);
-      setSortOrder('asc');
-    }
-  };
-
-  const filteredMembers = members
-    .filter(member => member.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
+  // Export functions
   function arrayToCSV(data, fields) {
     const csvRows = [];
     csvRows.push(fields.join(','));
@@ -470,6 +391,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     }
     return csvRows.join('\n');
   }
+
   function downloadCSV(csv, filename) {
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -480,13 +402,14 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     link.click();
     link.remove();
   }
+
   const handleExport = () => {
     if (exportOptions.format === 'csv') {
-      const csv = arrayToCSV(filteredMembers, exportOptions.fields);
+      const csv = arrayToCSV(members, exportOptions.fields);
       downloadCSV(csv, 'members_export.csv');
     } else if (exportOptions.format === 'pdf') {
       const doc = new jsPDF();
-      const tableData = filteredMembers.map(row =>
+      const tableData = members.map(row =>
         exportOptions.fields.map(field => Array.isArray(row[field]) ? row[field].join('; ') : row[field] ?? '')
       );
       autoTable(doc, {
@@ -504,10 +427,12 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     setSelectedMember(member);
     setTrainerModalOpen(true);
   };
+
   const handleTrainerModalClose = () => {
     setTrainerModalOpen(false);
     setSelectedMember(null);
   };
+
   const handleTrainerModalSubmit = async (trainerId) => {
     setTrainerModalLoading(true);
     try {
@@ -527,11 +452,13 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     setSelectedPackageId('');
     setUpgradeDialogOpen(true);
   };
+
   const handleUpgradeDialogClose = () => {
     setUpgradeDialogOpen(false);
     setUpgradeMember(null);
     setSelectedPackageId('');
   };
+
   const handleUpgradeConfirm = async () => {
     if (!selectedPackageId) return;
     setUpgradeLoading(true);
@@ -552,6 +479,46 @@ export default function MembersTab({ rowsPerPage = 10 }) {
     } finally {
       setUpgradeLoading(false);
     }
+  };
+
+  // Action modal functions
+  const handleActionModalOpen = (member) => {
+    setSelectedMemberForAction(member);
+    setActionModalOpen(true);
+  };
+
+  const handleActionModalClose = () => {
+    setActionModalOpen(false);
+    setSelectedMemberForAction(null);
+  };
+
+  const handleActionClick = (action) => {
+    if (!selectedMemberForAction) return;
+    
+    switch (action) {
+      case 'buy':
+        handleBuyClick(selectedMemberForAction);
+        break;
+      case 'freeze':
+        handleFreezeClick(selectedMemberForAction, false);
+        break;
+      case 'unfreeze':
+        handleFreezeClick(selectedMemberForAction, true);
+        break;
+      case 'trainer':
+        handleTrainerModalOpen(selectedMemberForAction);
+        break;
+      case 'qr':
+        handleQrCodeClick(selectedMemberForAction);
+        break;
+      case 'upgrade':
+        handleUpgradeClick(selectedMemberForAction);
+        break;
+      default:
+        break;
+    }
+    
+    handleActionModalClose();
   };
 
   if (loading) {
@@ -578,7 +545,7 @@ export default function MembersTab({ rowsPerPage = 10 }) {
         <h2 className="text-xl font-bold mb-2 sm:mb-0">Members</h2>
         <div className="flex flex-wrap items-center gap-4">
           <div className="text-sm text-gray-500">
-            Showing {members.length} of {totalPages * rowsPerPage} members
+            Showing {members.length} of {totalMembers} members
           </div>
           <Link
             to="/admin/add-member"
@@ -596,6 +563,126 @@ export default function MembersTab({ rowsPerPage = 10 }) {
           </Button>
         </div>
       </div>
+
+      {/* Search and Filter Section */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            {/* Search */}
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Search by Name or Email"
+                variant="outlined"
+                size="small"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search size={20} style={{ marginRight: 8, color: '#666' }} />
+                }}
+              />
+            </Grid>
+
+            {/* Filter Toggle */}
+            <Grid item xs={12} md={8}>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outlined"
+                  startIcon={<Filter />}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  Filters
+                </Button>
+                {(filters.packageId || filters.expirationStatus) && (
+                  <Button
+                    variant="text"
+                    onClick={clearFilters}
+                    size="small"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </Grid>
+
+            {/* Filter Options */}
+            {showFilters && (
+              <Grid item xs={12}>
+                <Grid container spacing={2}>
+                  {/* Package Type Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Package Type</InputLabel>
+                      <Select
+                        value={filters.packageId}
+                        onChange={(e) => handleFilterChange('packageId', e.target.value)}
+                        label="Package Type"
+                      >
+                        <MenuItem value="">All Packages</MenuItem>
+                        {filterOptions.packages && filterOptions.packages.map((pkg) => (
+                          <MenuItem key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price} ETB</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Expiration Status Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        value={filters.expirationStatus}
+                        onChange={(e) => handleFilterChange('expirationStatus', e.target.value)}
+                        label="Status"
+                      >
+                        <MenuItem value="">All Status</MenuItem>
+                        {filterOptions.expirationStatuses && filterOptions.expirationStatuses.map((status) => (
+                          <MenuItem key={status.value} value={status.value}>
+                            {status.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Sort Options */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Sort By</InputLabel>
+                      <Select
+                        value={filters.sortBy}
+                        onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                        label="Sort By"
+                      >
+                        {filterOptions.sortOptions && filterOptions.sortOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Sort Order */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Order</InputLabel>
+                      <Select
+                        value={filters.sortOrder}
+                        onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
+                        label="Order"
+                      >
+                        <MenuItem value="asc">Ascending</MenuItem>
+                        <MenuItem value="desc">Descending</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* Mobile View - Card Layout */}
       {isMobile && (
@@ -660,81 +747,37 @@ export default function MembersTab({ rowsPerPage = 10 }) {
 
                 <div className="flex items-start">
                   <div className="text-gray-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Trainer</div>
+                    <div className="text-sm">{member.trainerName}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Passes</div>
+                    <div className="text-sm">{member.totalPasses || 0}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
                     <Calendar size={16} />
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">Action</div>
                     <div className="flex flex-col gap-2">
-                      {/* First Row - Membership Management Buttons */}
-                      <div className="flex gap-1">
-                        {member.membershipStatus?.toLowerCase() !== 'active' && (
-                          <button
-                            className="bg-green-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-green-600 transition-colors flex items-center"
-                            onClick={() => handleBuyClick(member)}
-                            title="Buy membership"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                            </svg>
-                            Buy
-                          </button>
-                        )}
-                        {member.membershipStatus?.toLowerCase() === 'active' && !member.isFrozen && (
-                          <button
-                            className="bg-cyan-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-cyan-600 transition-colors flex items-center"
-                            onClick={() => handleFreezeClick(member, false)}
-                            title="Freeze membership"
-                          >
-                            <Snowflake size={16} className="mr-1" />
-                            Freeze
-                          </button>
-                        )}
-                        {member.membershipStatus?.toLowerCase() === 'active' && member.isFrozen && (
-                          <button
-                            className="bg-orange-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-orange-600 transition-colors flex items-center"
-                            onClick={() => handleFreezeClick(member, true)}
-                            title="Unfreeze membership"
-                          >
-                            <Snowflake size={16} className="mr-1" />
-                            Unfreeze
-                          </button>
-                        )}
-                        {/* Trainer reassign/remove button (mobile) */}
-                        <button
-                          className="bg-purple-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-purple-600 transition-colors flex items-center"
-                          onClick={() => handleTrainerModalOpen(member)}
-                          title="Reassign/Remove Trainer"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
-                          </svg>
-                          Trainer
-                        </button>
-                      </div>
-
-                      {/* Second Row - QR Code and Upgrade Buttons */}
-                      <div className="flex gap-1">
-                        {/* QR Code Button */}
-                        {(member.qrcodeData || member.membershipStatus?.toLowerCase() === 'active') && (
-                          <button
-                            className="bg-blue-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-blue-600 transition-colors flex items-center"
-                            onClick={() => handleQrCodeClick(member)}
-                            title="View QR code"
-                          >
-                            <QrCode size={16} className="mr-1" />
-                            QR Code
-                          </button>
-                        )}
-                        {/* Upgrade Package Button */}
-                        <button
-                          className="bg-yellow-500 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-yellow-600 transition-colors flex items-center"
-                          onClick={() => handleUpgradeClick(member)}
-                          title="Upgrade Package"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                          Upgrade
-                        </button>
-                      </div>
+                      {renderActionButtons(member)}
                     </div>
                   </div>
                 </div>
@@ -759,59 +802,50 @@ export default function MembersTab({ rowsPerPage = 10 }) {
 
       {/* Desktop View - Table Layout */}
       {!isMobile && (
-        <>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <TextField
-              label="Search by Name"
-              variant="outlined"
-              size="small"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              sx={{ minWidth: 250 }}
-            />
-          </Box>
-          <TableContainer component={Paper} sx={{ mt: 2 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'fullName'}
+                    direction={filters.sortBy === 'fullName' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('fullName', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Member
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membership'}
+                    direction={filters.sortBy === 'membership' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membership', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Membership Type
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membershipStatus'}
+                    direction={filters.sortBy === 'membershipStatus' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membershipStatus', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Membership Status
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Emergency Contact</TableCell>
+                <TableCell>Address</TableCell>
+                <TableCell>Birth Year</TableCell>
+                <TableCell>Trainer</TableCell>
+                <TableCell>Passes</TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.id} hover>
                   <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
-                      onClick={() => handleSort('name')}
-                    >
-                  Member
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'membership'}
-                      direction={sortBy === 'membership' ? sortOrder : 'asc'}
-                      onClick={() => handleSort('membership')}
-                    >
-                  Membership Type
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'membershipStatus'}
-                      direction={sortBy === 'membershipStatus' ? sortOrder : 'asc'}
-                      onClick={() => handleSort('membershipStatus')}
-                    >
-                  Membership Status
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>Phone</TableCell>
-                  <TableCell>Emergency Contact</TableCell>
-                  <TableCell>Address</TableCell>
-                  <TableCell>Birth Year</TableCell>
-                  <TableCell>Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredMembers.map((member) => (
-                  <TableRow key={member.id} hover>
-                    <TableCell>
                     <div className="flex items-center">
                       {renderAvatar(member)}
                       <div className="ml-4">
@@ -823,20 +857,21 @@ export default function MembersTab({ rowsPerPage = 10 }) {
                         </div>
                       </div>
                     </div>
-                    </TableCell>
-                    <TableCell>{member.membership}</TableCell>
-                    <TableCell>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</TableCell>
-                    <TableCell>{member.phone}</TableCell>
-                    <TableCell>{member.emergencyContact}</TableCell>
-                    <TableCell>{member.address}</TableCell>
-                    <TableCell>{member.birthYear}</TableCell>
-                    <TableCell>{renderActionButtons(member)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
+                  </TableCell>
+                  <TableCell>{member.membership}</TableCell>
+                  <TableCell>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</TableCell>
+                  <TableCell>{member.phone}</TableCell>
+                  <TableCell>{member.emergencyContact}</TableCell>
+                  <TableCell>{member.address}</TableCell>
+                  <TableCell>{member.birthYear}</TableCell>
+                  <TableCell>{member.trainerName}</TableCell>
+                  <TableCell>{member.totalPasses}</TableCell>
+                  <TableCell>{renderActionButtons(member)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {/* Pagination controls */}
@@ -963,21 +998,21 @@ export default function MembersTab({ rowsPerPage = 10 }) {
           </TextField>
           <div style={{ marginTop: 16 }}>
             <h4>Select Fields to Export</h4>
-            {memberFieldOptions.map((field) => (
+            {['name', 'email', 'membership', 'membershipStatus', 'phone', 'emergencyContact', 'address', 'birthYear'].map((field) => (
               <FormControlLabel
-                key={field.id}
+                key={field}
                 control={
                   <Checkbox
-                    checked={exportOptions.fields.includes(field.id)}
+                    checked={exportOptions.fields.includes(field)}
                     onChange={(e) => {
                       const newFields = e.target.checked
-                        ? [...exportOptions.fields, field.id]
-                        : exportOptions.fields.filter(f => f !== field.id);
+                        ? [...exportOptions.fields, field]
+                        : exportOptions.fields.filter(f => f !== field);
                       setExportOptions({...exportOptions, fields: newFields});
                     }}
                   />
                 }
-                label={field.label}
+                label={field.charAt(0).toUpperCase() + field.slice(1)}
               />
             ))}
           </div>
@@ -1024,6 +1059,100 @@ export default function MembersTab({ rowsPerPage = 10 }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Action Modal */}
+      <Dialog open={actionModalOpen} onClose={handleActionModalClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Actions for {selectedMemberForAction?.name}
+        </DialogTitle>
+        <DialogContent>
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* Buy Membership */}
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() !== 'active' && (
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                onClick={() => handleActionClick('buy')}
+                startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                </svg>}
+              >
+                Buy Membership
+              </Button>
+            )}
+
+            {/* Freeze/Unfreeze */}
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active' && !selectedMemberForAction?.isFrozen && (
+              <Button
+                variant="contained"
+                color="info"
+                fullWidth
+                onClick={() => handleActionClick('freeze')}
+                startIcon={<Snowflake size={20} />}
+              >
+                Freeze Membership
+              </Button>
+            )}
+
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active' && selectedMemberForAction?.isFrozen && (
+              <Button
+                variant="contained"
+                color="warning"
+                fullWidth
+                onClick={() => handleActionClick('unfreeze')}
+                startIcon={<Snowflake size={20} />}
+              >
+                Unfreeze Membership
+              </Button>
+            )}
+
+            {/* Trainer Management */}
+            <Button
+              variant="contained"
+              color="secondary"
+              fullWidth
+              onClick={() => handleActionClick('trainer')}
+              startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
+              </svg>}
+            >
+              Manage Trainer
+            </Button>
+
+            {/* QR Code */}
+            {(selectedMemberForAction?.qrcodeData || selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active') && (
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={() => handleActionClick('qr')}
+                startIcon={<QrCode size={20} />}
+              >
+                View QR Code
+              </Button>
+            )}
+
+            {/* Upgrade Package */}
+            <Button
+              variant="contained"
+              color="warning"
+              fullWidth
+              onClick={() => handleActionClick('upgrade')}
+              startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>}
+            >
+              Upgrade Package
+            </Button>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleActionModalClose} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
-}
+} 

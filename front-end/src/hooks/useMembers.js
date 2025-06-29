@@ -8,13 +8,33 @@ const useMembers = (rowsPerPage = 10) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMembers, setTotalMembers] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  
+  // Filter and search state
+  const [filters, setFilters] = useState({
+    search: '',
+    packageId: '',
+    expirationStatus: '',
+    sortBy: 'fullName',
+    sortOrder: 'asc'
+  });
 
-  const fetchAllMembers = async () => {
+  const fetchAllMembers = async (newFilters = null) => {
     try {
       setLoading(true);
       const options = await GET_HEADER({ isJson: true });
+      
+      // Use new filters if provided, otherwise use current filters
+      const currentFilters = newFilters || filters;
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: rowsPerPage.toString(),
+        ...currentFilters
+      });
+
       const response = await fetch(
-        `${API_URL}/users`,
+        `${API_URL}/users?${queryParams}`,
         {
           method: 'GET',
           headers: options.headers
@@ -45,19 +65,22 @@ const useMembers = (rowsPerPage = 10) => {
             membership: user.membership,
             membershipStatus: user.membershipStatus,
             membershipExpiry: user.membershipExpiry,
-            qrcodeData: user.qrcodeData, // Include QR code data from the API response
-            paymentId: user.paymentId, // Payment ID for freeze/unfreeze operations
-            isFrozen: user.isFrozen || false, // Whether the membership is frozen
-            freezeStartDate: user.freezeStartDate, // When the freeze started
-            freezeEndDate: user.freezeEndDate, // When the freeze will end
-            originalExpiryDate: user.originalExpiryDate, // Original expiry date before freezing
+            qrcodeData: user.qrcodeData,
+            paymentId: user.paymentId,
+            isFrozen: user.isFrozen || false,
+            freezeStartDate: user.freezeStartDate,
+            freezeEndDate: user.freezeEndDate,
+            originalExpiryDate: user.originalExpiryDate,
             trainerId: user.trainerId,
+            trainer: user.trainer,
+            trainerName: user.trainer ? user.trainer.name : 'Unassigned',
+            totalPasses: user.totalPasses || 0
           };
         });
 
         setAllMembers(formattedMembers);
-        setTotalMembers(formattedMembers.length);
-        setTotalPages(Math.ceil(formattedMembers.length / rowsPerPage));
+        setTotalMembers(data.totalCount || formattedMembers.length);
+        setTotalPages(data.totalPages || Math.ceil(formattedMembers.length / rowsPerPage));
       } else {
         throw new Error(data.message || 'Failed to fetch members');
       }
@@ -73,21 +96,31 @@ const useMembers = (rowsPerPage = 10) => {
     setCurrentPage(page);
   };
 
-  const members = useMemo(() => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    return allMembers.slice(startIndex, endIndex);
-  }, [allMembers, currentPage, rowsPerPage]);
+  const updateFilters = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
+  const handleSearch = (searchTerm) => {
+    updateFilters({ search: searchTerm });
+  };
+
+  const handleSort = (sortBy, sortOrder) => {
+    updateFilters({ sortBy, sortOrder });
+  };
+
+  const members = useMemo(() => {
+    return allMembers;
+  }, [allMembers]);
 
   useEffect(() => {
     setTotalPages(Math.ceil(totalMembers / rowsPerPage));
   }, [rowsPerPage, totalMembers]);
 
-  // Fetch all members when component mounts
+  // Fetch members when component mounts or when filters/page changes
   useEffect(() => {
     fetchAllMembers();
-  }, []);
+  }, [currentPage, filters]);
 
   // Reassign or remove trainer for a member
   const reassignOrRemoveTrainer = async (memberId, trainerId = null) => {
@@ -114,8 +147,12 @@ const useMembers = (rowsPerPage = 10) => {
     totalPages,
     totalMembers,
     rowsPerPage,
+    filters,
     handlePageChange,
-    refetch: fetchAllMembers,
+    updateFilters,
+    handleSearch,
+    handleSort,
+    refetch: () => fetchAllMembers(),
     reassignOrRemoveTrainer
   };
 };

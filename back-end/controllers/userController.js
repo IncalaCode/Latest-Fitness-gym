@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User , Payment } = require('../models');
+const { User , Payment, Package } = require('../models');
+const { Trainer } = require('../models');
 const { Op } = require('sequelize');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const crypto = require('crypto');
@@ -194,15 +195,57 @@ exports.resetPassword = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
     try {
+      // Extract query parameters
+      const {
+        search = '',
+        packageId = '',
+        expirationStatus = '',
+        sortBy = 'fullName',
+        sortOrder = 'asc',
+        page = 1,
+        limit = 10
+      } = req.query;
+
+      // Calculate offset for pagination
+      const offset = (page - 1) * limit;
+
+      // Build where clause for User model
+      const userWhereClause = {};
+      
+      // Search functionality
+      if (search) {
+        userWhereClause[Op.or] = [
+          { fullName: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } }
+        ];
+      }
+
+      // Get users with trainer information
       const users = await User.findAll({
-        attributes: { include: ['trainerId'], exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] }
+        where: userWhereClause,
+        attributes: { 
+          include: ['trainerId'], 
+          exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
+        },
+        include: [
+          {
+            model: Trainer,
+            as: 'trainer',
+            attributes: ['id', 'name', 'email', 'phone'],
+            required: false
+          }
+        ],
+        order: [[sortBy, sortOrder.toUpperCase()]],
+        limit: parseInt(limit),
+        offset: parseInt(offset)
       });
 
+      // Get all active payments for filtering
       const activePayments = await Payment.findAll({
         where: {
           paymentstatus: 'completed',
           expiryDate: {
-            [Op.gt]: new Date() // Only include active memberships (not expired)
+            [Op.gt]: new Date()
           }
         },
         attributes: [
@@ -214,7 +257,9 @@ exports.getAllUsers = async (req, res) => {
           'isFrozen',
           'freezeStartDate',
           'freezeEndDate',
-          'originalExpiryDate'
+          'originalExpiryDate',
+          'productId',
+          'totalPasses'
         ]
       });
 
@@ -227,7 +272,8 @@ exports.getAllUsers = async (req, res) => {
         }
       });
 
-      const usersWithMembership = users.map(user => {
+      // Process users and apply membership data
+      let usersWithMembership = users.map(user => {
         const userData = user.get({ plain: true });
         const userPayment = userPaymentMap[userData.id];
 
@@ -241,19 +287,68 @@ exports.getAllUsers = async (req, res) => {
           userData.freezeStartDate = userPayment.freezeStartDate;
           userData.freezeEndDate = userPayment.freezeEndDate;
           userData.originalExpiryDate = userPayment.originalExpiryDate;
+          userData.totalPasses = userPayment.totalPasses || 0;
         } else {
           userData.membership = 'None';
           userData.membershipStatus = 'inactive';
           userData.isFrozen = false;
+          userData.totalPasses = 0;
         }
 
         return userData;
       });
 
+      // Apply package type filter
+      if (packageId) {
+        // Filter by package ID from payments
+        const filteredPayments = activePayments.filter(payment => 
+          payment.productId === packageId
+        );
+        const filteredUserIds = filteredPayments.map(payment => payment.userId);
+        usersWithMembership = usersWithMembership.filter(user => 
+          filteredUserIds.includes(user.id)
+        );
+      }
+
+      // Apply expiration status filter
+      if (expirationStatus) {
+        switch (expirationStatus) {
+          case 'active':
+            usersWithMembership = usersWithMembership.filter(user => 
+              user.membershipStatus === 'active' && !user.isFrozen
+            );
+            break;
+          case 'frozen':
+            usersWithMembership = usersWithMembership.filter(user => 
+              user.membershipStatus === 'active' && user.isFrozen
+            );
+            break;
+          case 'inactive':
+            usersWithMembership = usersWithMembership.filter(user => 
+              user.membershipStatus === 'inactive'
+            );
+            break;
+        }
+      }
+
+      // Get total count for pagination (without limit/offset)
+      const totalUsers = await User.count({ where: userWhereClause });
+      const totalPages = Math.ceil(totalUsers / limit);
+
       res.status(200).json({
         success: true,
         count: usersWithMembership.length,
-        data: usersWithMembership
+        totalCount: totalUsers,
+        currentPage: parseInt(page),
+        totalPages,
+        data: usersWithMembership,
+        filters: {
+          search,
+          packageId,
+          expirationStatus,
+          sortBy,
+          sortOrder
+        }
       });
     } catch (error) {
       console.error('Error fetching users with membership:', error);
@@ -391,6 +486,75 @@ exports.deleteUser = async (req, res) => {
       message: 'User deleted successfully'
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+exports.getFilterOptions = async (req, res) => {
+  try {
+    // Get all active packages
+    const packages = await Package.findAll({
+      where: { isActive: true },
+      attributes: ['id', 'name', 'price'],
+      order: [['name', 'ASC']]
+    });
+
+    // Get all active trainers
+    const trainers = await Trainer.findAll({
+      where: { isActive: true },
+      attributes: ['id', 'name', 'email'],
+      order: [['name', 'ASC']]
+    });
+
+    // Get unique package types from active payments
+    const activePayments = await Payment.findAll({
+      where: {
+        paymentstatus: 'completed',
+        expiryDate: {
+          [Op.gt]: new Date()
+        }
+      },
+      attributes: ['planTitle'],
+      group: ['planTitle']
+    });
+
+    const packageTypes = activePayments.map(payment => payment.planTitle).filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        packages: packages.map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          price: pkg.price
+        })),
+        trainers: trainers.map(trainer => ({
+          id: trainer.id,
+          name: trainer.name,
+          email: trainer.email
+        })),
+        packageTypes: [...new Set(packageTypes)].map(type => ({
+          value: type,
+          label: type
+        })),
+        expirationStatuses: [
+          { value: 'active', label: 'Active' },
+          { value: 'frozen', label: 'Frozen' },
+          { value: 'inactive', label: 'Inactive' }
+        ],
+        sortOptions: [
+          { value: 'fullName', label: 'Name (A-Z)' },
+          { value: 'createdAt', label: 'Recently Registered' },
+          { value: 'membershipExpiry', label: 'Expiry Date' }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching filter options:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error',

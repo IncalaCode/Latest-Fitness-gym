@@ -55,7 +55,8 @@ const UserDashboard = () => {
             membershipStatus: data.data.userData?.membershipStatus || 'Inactive',
             membershipType: data.data.userData?.membershipType || 'None',
             expirationDate: data.data.userData?.expirationDate || '',
-            trainer: data.data.userData?.trainer || null
+            trainer: data.data.userData?.trainer || null,
+            totalPasses: data.data.userData?.totalPasses || 0
           },
           qrCodeData: data.data.qrCodeData || null,
           stats: data.data.stats || {},
