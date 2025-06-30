@@ -1122,12 +1122,12 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
             )}
 
             {/* Trainer Management */}
-            {(() => {
+            {/* {(() => {
               // Find the member's package to check if it requires a trainer
               const memberPackage = packages.find(pkg => pkg.name === selectedMemberForAction?.membership);
               const requiresTrainer = memberPackage?.requiresTrainer;
               
-              return requiresTrainer && (
+              return requiresTrainer && ( */}
                 <Button
                   variant="contained"
                   color="secondary"
@@ -1139,8 +1139,8 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                 >
                   Manage Trainer
                 </Button>
-              );
-            })()}
+              {/* );
+            })()} */}
 
             {/* QR Code */}
             {(selectedMemberForAction?.qrcodeData || selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active') && (
