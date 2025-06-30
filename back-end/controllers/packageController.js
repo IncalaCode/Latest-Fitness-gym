@@ -1,11 +1,12 @@
 const { Package } = require('../models');
 const { Op } = require('sequelize');
 
+
 exports.createPackage = async (req, res) => {
   try {
     const packageData = req.body;
 
-    // Validate required fields
+    // Basic validations
     if (!packageData.name || !packageData.price || !packageData.duration) {
       return res.status(400).json({
         success: false,
@@ -13,13 +14,22 @@ exports.createPackage = async (req, res) => {
       });
     }
 
-    // Validate price and duration are positive numbers
     if (parseFloat(packageData.price) <= 0) {
       return res.status(400).json({
         success: false,
         message: 'Price must be a positive number'
       });
     }
+// Validate numberOfPasses < duration
+if (
+  packageData.numberOfPasses &&
+  parseInt(packageData.numberOfPasses) >= parseInt(packageData.duration)
+) {
+  return res.status(400).json({
+    success: false,
+    message: 'Number of passes must be less than the duration'
+  });
+}
 
     if (parseInt(packageData.duration) <= 0) {
       return res.status(400).json({
@@ -28,7 +38,6 @@ exports.createPackage = async (req, res) => {
       });
     }
 
-    // Validate special access time slots
     if (packageData.accessLevel === 'special') {
       if (!packageData.startTime || !packageData.endTime) {
         return res.status(400).json({
@@ -37,7 +46,6 @@ exports.createPackage = async (req, res) => {
         });
       }
 
-      // Validate time format and range
       if (packageData.startTime >= packageData.endTime) {
         return res.status(400).json({
           success: false,
@@ -46,7 +54,6 @@ exports.createPackage = async (req, res) => {
       }
     }
 
-    // Validate benefits field
     if (packageData.benefits && !Array.isArray(packageData.benefits)) {
       return res.status(400).json({
         success: false,
@@ -54,21 +61,28 @@ exports.createPackage = async (req, res) => {
       });
     }
 
-    // Clean up data - remove time fields if not special access
+    // ✅ Check for duplicate package name
+    const existingPackage = await Package.findOne({ where: { name: packageData.name } });
+    if (existingPackage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Package name already exists, please choose a different name'
+      });
+    }
+
+    // Clean up data
     const cleanedData = { ...packageData };
     if (packageData.accessLevel !== 'special') {
       delete cleanedData.startTime;
       delete cleanedData.endTime;
     }
 
-    // Ensure benefits is an array
     if (!cleanedData.benefits) {
       cleanedData.benefits = [];
     }
 
     const newPackage = await Package.create(cleanedData);
 
-    // Ensure benefits is properly formatted
     const createdPackageData = newPackage.toJSON();
     if (!createdPackageData.benefits || !Array.isArray(createdPackageData.benefits)) {
       createdPackageData.benefits = [];
@@ -78,6 +92,7 @@ exports.createPackage = async (req, res) => {
       success: true,
       data: createdPackageData
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -86,6 +101,7 @@ exports.createPackage = async (req, res) => {
     });
   }
 };
+
 
 exports.getAllPackages = async (req, res) => {
   try {

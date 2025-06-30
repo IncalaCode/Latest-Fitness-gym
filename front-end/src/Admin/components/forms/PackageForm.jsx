@@ -90,40 +90,48 @@ const PackageForm = ({
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Validate required fields
-      if (!formData.name.trim()) {
-        throw new Error('Package name is required');
-      }
-      if (!formData.price || parseFloat(formData.price) <= 0) {
-        throw new Error('Valid price is required');
-      }
-      if (!formData.duration || parseInt(formData.duration) <= 0) {
-        throw new Error('Valid duration is required');
-      }
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    // Validate required fields
+    if (!formData.name.trim()) throw new Error('Package name is required');
+    if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
+    if (!formData.duration || parseInt(formData.duration) <= 0) throw new Error('Valid duration is required');
 
-      // Validate special access time slots
-      if (formData.accessLevel === 'special' && (!formData.startTime || !formData.endTime)) {
-        throw new Error('Start and end time are required for special access packages');
-      }
-
-      // Validate time range for special access
-      if (formData.accessLevel === 'special' && formData.startTime && formData.endTime) {
-        if (formData.startTime >= formData.endTime) {
-          throw new Error('End time must be after start time');
-        }
-      }
-
-      const result = await onSubmit(formData, packageData);
-      if (result && result.success) {
-        // Form will be reset by useEffect when packageData changes
-      }
-    } catch (error) {
-      enqueueSnackbar(error.message, { variant: 'error' });
+    // 🚫 Disallow unlimited passes
+    if (!formData.numberOfPasses || parseInt(formData.numberOfPasses) <= 0) {
+      throw new Error('Number of passes is required');
     }
-  };
+
+    // ⛔ Enforce: passes < duration
+    const passes = parseInt(formData.numberOfPasses);
+    const duration = parseInt(formData.duration);
+    if (passes >= duration) {
+      throw new Error('Number of passes must be less than the duration');
+    }
+
+    // Special access time check
+    if (formData.accessLevel === 'special' && (!formData.startTime || !formData.endTime)) {
+      throw new Error('Start and end time are required for special access packages');
+    }
+    if (formData.accessLevel === 'special' && formData.startTime >= formData.endTime) {
+      throw new Error('End time must be after start time');
+    }
+
+    const result = await onSubmit(formData, packageData);
+
+    if (result && result.success) {
+      // handled by useEffect
+    } else if (result && result.message) {
+      throw new Error(result.message); // backend message
+    } else {
+      throw new Error('Something went wrong while creating the package');
+    }
+  } catch (error) {
+    enqueueSnackbar(error.message, { variant: 'error' });
+  }
+};
+
 
   return (
     <Paper sx={{ p: 3, width: '100%' }}>
@@ -229,7 +237,7 @@ const PackageForm = ({
 
             <TextField
               name="numberOfPasses"
-              label="Number of Passes (leave empty for unlimited)"
+              label="Number of Passes"
               type="number"
               value={formData.numberOfPasses}
               onChange={handleChange}
