@@ -45,25 +45,25 @@ function App() {
           
           {/* Admin routes */}
           <Route path="/admin-dashboard" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/admin/check-ins" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           
           {/* Admin tab routes */}
           <Route path="/admin/members" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/pending-approvals" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
@@ -75,24 +75,24 @@ function App() {
           } />
 
           <Route path="/admin/expiring-memberships" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin', "receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/profile" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           
           <Route path="/admin/add-member" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AddMemberPage/>
             </ProtectedRoute>
           } />
 
           <Route path="/admin/trainers" element={
-            <ProtectedRoute allowed={['Admin']}>
+            <ProtectedRoute allowed={['Admin' ,"receptionist"]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />

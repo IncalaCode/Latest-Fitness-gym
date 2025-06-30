@@ -9,13 +9,14 @@ export default function StatsCards({
 }) {
   return (
     <motion.div
+      className="flex-1 h-full flex flex-col"
       whileHover={{
         y: -3,
         transition: { duration: 0.3 },
         boxShadow: "0px 10px 20px rgba(0, 0, 0, 0.3)",
       }}
     >
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white rounded-lg shadow p-4 flex flex-col flex-1">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-700">{title}</h2>
           <div className="p-2 rounded-full bg-gray-50">{icon}</div>

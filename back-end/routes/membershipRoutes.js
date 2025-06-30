@@ -5,7 +5,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const { route } = require('./pendingApprovalsRoutes');
 
 router.use(protect)
-router.use(authorize('admin'))
+router.use(authorize('admin','receptionist'))
 router.get('/expiring', membershipController.getExpiringMemberships);
 router.post('/reminder/:membershipId', membershipController.sendMembershipReminder);
 router.post('/reassign-trainer', membershipController.reassignOrRemoveTrainer);

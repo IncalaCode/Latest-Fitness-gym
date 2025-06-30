@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSnackbar } from 'notistack';
 import { API_ENDPOINT_FUNCTION, GET_HEADER } from '../../config/config';
+import axios from 'axios';
 
 export const useAdminProfile = () => {
   const [loading, setLoading] = useState(false);
@@ -53,5 +54,28 @@ export const useAdminProfile = () => {
     error
   };
 };
+
+export function useRevenue() {
+  const [revenue, setRevenue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    async function fetchRevenue() {
+      setLoading(true);
+      try {
+        const auth = JSON.parse(localStorage.getItem('auth'));
+        const token = auth?.token;
+        const res = await axios.get('/api/payment/revenue', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRevenue(res.data.totalRevenue || 0);
+      } catch (e) {
+        setRevenue(0);
+      }
+      setLoading(false);
+    }
+    fetchRevenue();
+  }, []);
+  return { revenue, loading };
+}
 
 export default useAdminProfile;

@@ -1,6 +1,7 @@
 const { User, Payment, CheckIn, Admin, sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
+const { getTotalRevenue } = require('./adminPaymentController');
 
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
@@ -61,6 +62,9 @@ exports.getDashboardStats = async (req, res) => {
     const activeTrainers = await sequelize.models.Trainer.count({ where: { isActive: true } });
     const inactiveTrainers = await sequelize.models.Trainer.count({ where: { isActive: false } });
 
+    // Fetch total revenue
+    const totalRevenue = await getTotalRevenue();
+
     return res.status(200).json({
       success: true,
       data: {
@@ -69,7 +73,8 @@ exports.getDashboardStats = async (req, res) => {
         totalFrozenMembers: frozenMembers,
         totalTrainers,
         activeTrainers,
-        inactiveTrainers
+        inactiveTrainers,
+        totalRevenue
       }
     });
   } catch (error) {

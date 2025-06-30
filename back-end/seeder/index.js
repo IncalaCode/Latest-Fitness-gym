@@ -19,6 +19,14 @@ async function seedAdmins() {
         role: 'Admin',
         photoUrl: null
       },
+      {
+        firstName: 'Reception',
+        lastName: 'User',
+        email: 'receptionist@example.com',
+        password: hashedPassword,
+        role: 'receptionist',
+        photoUrl: null
+      }
     ];
 
     await Admin.bulkCreate(admins, { ignoreDuplicates: true });

@@ -132,3 +132,17 @@ exports.createAdminPayment = async (req, res) => {
     });
   }
 };
+
+/**
+ * Utility function to get total revenue (sum of all completed payments)
+ */
+async function getTotalRevenue() {
+  const result = await Payment.findOne({
+    attributes: [
+      [db.Sequelize.fn('SUM', db.Sequelize.col('amount')), 'totalRevenue']
+    ],
+    where: { paymentstatus: 'completed' }
+  });
+  return result.get('totalRevenue') || 0;
+}
+exports.getTotalRevenue = getTotalRevenue;

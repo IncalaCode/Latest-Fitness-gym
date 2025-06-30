@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import StatsCards from "./StatsCards";
-import { Users, UserCheck, Snowflake, UserCog } from "lucide-react";
+import { Users, UserCheck, Snowflake, UserCog, CreditCard } from "lucide-react";
 import PendingApprovalsTab from "./tabs/PendingApprovalsTab";
 import MembersTab from "./tabs/MembersTab";
 import ExpiringMembershipsTab from "./tabs/ExpiringMembershipsTab";
@@ -17,7 +17,7 @@ export default function DashboardPage({ initialTab }) {
     totalCheckInsToday: 0,
     totalFrozenMembers: 0,
     totalTrainers: 0,
-    activeTrainers: 0,
+    activeTrainers: 0,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
     inactiveTrainers: 0
   });
   const [showGenerator, setShowGenerator] = useState(false);
@@ -36,7 +36,6 @@ export default function DashboardPage({ initialTab }) {
   const handleOpenGenerator = () => {
     setShowGenerator(true);
   };
-
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -63,16 +62,22 @@ export default function DashboardPage({ initialTab }) {
     setActiveTab(tab);
   };
 
+  // Get user role from localStorage
+  let userRole = null;
+  try {
+    const auth = JSON.parse(localStorage.getItem('auth'));
+    userRole = auth?.user?.role;
+  } catch (e) {}
+
   return (
     <div>
-    {/* YouTube QR Generator Modal - For Testing */}
-    <YouTubeQRGenerator
+      {/* YouTube QR Generator Modal - For Testing */}
+      <YouTubeQRGenerator
         isOpen={showGenerator}
         onClose={handleCloseGenerator}
       />
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
-
         <motion.button
           className="flex items-center justify-center px-3 sm:px-4 py-2 bg-gray-800 text-amber-50 rounded-lg transition-colors text-sm sm:text-base"
           onClick={handleOpenGenerator}
@@ -84,32 +89,36 @@ export default function DashboardPage({ initialTab }) {
         >
           Generate QR
         </motion.button>
-        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${userRole === 'Admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 mb-8`}>
         <StatsCards
           title="Total Active Members"
           value={stats.totalActiveMembers.toLocaleString()}
           description="Not expired, not frozen"
           icon={<Users className="h-6 w-6 text-blue-500" />} />
-
         <StatsCards
           title="Total Check-Ins Today"
           value={stats.totalCheckInsToday.toLocaleString()}
           description="Unique QR scans today"
           icon={<UserCheck className="h-6 w-6 text-green-500" />} />
-
         <StatsCards
           title="Total Frozen Members"
           value={stats.totalFrozenMembers.toLocaleString()}
           description="Currently paused memberships"
           icon={<Snowflake className="h-6 w-6 text-cyan-500" />} />
-
         <StatsCards
           title="Total Trainers"
           value={stats.totalTrainers.toLocaleString()}
           description={`Active: ${stats.activeTrainers}, Inactive: ${stats.inactiveTrainers}`}
           icon={<UserCog className="h-6 w-6 text-purple-500" />} />
+        {userRole === 'Admin' && (
+          <StatsCards
+            title="Total Revenue"
+            value={`${(stats.totalRevenue || 0).toLocaleString()} ETB`}
+            description="All completed payments"
+            icon={<CreditCard className="h-6 w-6 text-amber-500" />} />
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow">

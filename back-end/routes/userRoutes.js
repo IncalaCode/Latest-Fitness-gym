@@ -7,10 +7,10 @@ router.post('/register', userController.register);
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password', userController.resetPassword);
 
-router.get('/', protect, authorize('Admin'), userController.getAllUsers);
-router.get('/filter-options', protect, authorize('Admin'), userController.getFilterOptions);
+router.get('/', protect, authorize('Admin',"receptionist"), userController.getAllUsers);
+router.get('/filter-options', protect, authorize('Admin',"receptionist"), userController.getFilterOptions);
 router.get('/:id', protect, userController.getUserById);
 router.put('/:id', protect, userController.uploadProfilePhoto, userController.updateUser);
-router.delete('/:id', protect, authorize('Admin'), userController.deleteUser);
+router.delete('/:id', protect, authorize('Admin',"receptionist"), userController.deleteUser);
 
 module.exports = router;

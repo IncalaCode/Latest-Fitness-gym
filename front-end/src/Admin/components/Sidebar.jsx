@@ -76,6 +76,13 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
     }
   };
 
+  // Get user role from localStorage
+  let userRole = null;
+  try {
+    const auth = JSON.parse(localStorage.getItem('auth'));
+    userRole = auth?.user?.role;
+  } catch (e) {}
+
   return (
     <>
       {/* Mobile Toggle Button - Fixed position */}
@@ -140,14 +147,16 @@ export default function Sidebar({ isOpen, toggleSidebar, setIsOpen }) {
               isOpen={isOpen}
               onClick={handleLinkClick}
             />
-            <SidebarLink
-              to="/admin/packages"
-              icon={<Package size={20} />}
-              text="Packages"
-              active={isRouteActive("/admin/packages")}
-              isOpen={isOpen}
-              onClick={handleLinkClick}
-            />
+            {userRole !== 'receptionist' && (
+              <SidebarLink
+                to="/admin/packages"
+                icon={<Package size={20} />}
+                text="Packages"
+                active={isRouteActive("/admin/packages")}
+                isOpen={isOpen}
+                onClick={handleLinkClick}
+              />
+            )}
               
             <SidebarLink
               to="/admin/check-ins"

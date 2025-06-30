@@ -9,7 +9,7 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.use(protect);
-router.use(authorize('admin'));
+router.use(authorize('admin','receptionist'));
 router.get('/', getPendingApprovals);
 router.get('/:id', getPendingApprovalDetails);
 router.get('/:id/approve', approveUser);

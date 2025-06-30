@@ -46,7 +46,7 @@ const sendLoginResponse = (res, user, role) => {
     message: 'Login successful',
     user: {
       id: user.id,
-      fullName: role === 'Admin' ? `${user.firstName} ${user.lastName}` : user.fullName,
+      fullName: (role === 'Admin' || role === 'receptionist') ? `${user.firstName} ${user.lastName}` : user.fullName,
       email: user.email,
       role,
       photoUrl: user.photoUrl

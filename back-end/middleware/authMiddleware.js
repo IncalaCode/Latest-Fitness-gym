@@ -28,7 +28,7 @@ exports.protect = async (req, res, next) => {
       // Find the user based on role
       let user;
       
-      if (decoded.role.toLowerCase() === 'admin') {
+      if (decoded.role.toLowerCase() === 'admin' || decoded.role.toLowerCase() === 'receptionist') {
         user = await Admin.findByPk(decoded.id);
       } else {
         user = await User.findByPk(decoded.id);
