@@ -839,6 +839,15 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                 <TableCell>Birth Year</TableCell>
                 <TableCell>Trainer</TableCell>
                 <TableCell>Passes</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membershipExpiry'}
+                    direction={filters.sortBy === 'membershipExpiry' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membershipExpiry', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Expiry Date
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
@@ -866,6 +875,9 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                   <TableCell>{member.birthYear}</TableCell>
                   <TableCell>{member.trainerName}</TableCell>
                   <TableCell>{member.totalPasses}</TableCell>
+                  <TableCell>
+                    {member.membershipExpiry ? new Date(member.membershipExpiry).toLocaleDateString() : 'N/A'}
+                  </TableCell>
                   <TableCell>{renderActionButtons(member)}</TableCell>
                 </TableRow>
               ))}
@@ -1110,17 +1122,25 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
             )}
 
             {/* Trainer Management */}
-            <Button
-              variant="contained"
-              color="secondary"
-              fullWidth
-              onClick={() => handleActionClick('trainer')}
-              startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
-              </svg>}
-            >
-              Manage Trainer
-            </Button>
+            {(() => {
+              // Find the member's package to check if it requires a trainer
+              const memberPackage = packages.find(pkg => pkg.name === selectedMemberForAction?.membership);
+              const requiresTrainer = memberPackage?.requiresTrainer;
+              
+              return requiresTrainer && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  fullWidth
+                  onClick={() => handleActionClick('trainer')}
+                  startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
+                  </svg>}
+                >
+                  Manage Trainer
+                </Button>
+              );
+            })()}
 
             {/* QR Code */}
             {(selectedMemberForAction?.qrcodeData || selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active') && (

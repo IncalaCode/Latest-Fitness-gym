@@ -235,7 +235,6 @@ exports.getAllUsers = async (req, res) => {
             required: false
           }
         ],
-        order: [[sortBy, sortOrder.toUpperCase()]],
         limit: parseInt(limit),
         offset: parseInt(offset)
       });
@@ -329,6 +328,41 @@ exports.getAllUsers = async (req, res) => {
             );
             break;
         }
+      }
+
+      // Apply sorting after processing membership data
+      if (sortBy === 'membershipExpiry') {
+        usersWithMembership.sort((a, b) => {
+          const dateA = a.membershipExpiry ? new Date(a.membershipExpiry) : new Date('9999-12-31');
+          const dateB = b.membershipExpiry ? new Date(b.membershipExpiry) : new Date('9999-12-31');
+          
+          if (sortOrder === 'asc') {
+            return dateA - dateB;
+          } else {
+            return dateB - dateA;
+          }
+        });
+      } else {
+        // For other sort fields, sort the original users array
+        users.sort((a, b) => {
+          const aValue = a[sortBy] || '';
+          const bValue = b[sortBy] || '';
+          
+          if (sortOrder === 'asc') {
+            return aValue.localeCompare(bValue);
+          } else {
+            return bValue.localeCompare(aValue);
+          }
+        });
+        
+        // Re-map the sorted users to include membership data
+        const sortedUserIds = users.map(user => user.id);
+        const userMap = {};
+        usersWithMembership.forEach(user => {
+          userMap[user.id] = user;
+        });
+        
+        usersWithMembership = sortedUserIds.map(id => userMap[id]).filter(Boolean);
       }
 
       // Get total count for pagination (without limit/offset)
@@ -548,7 +582,8 @@ exports.getFilterOptions = async (req, res) => {
         ],
         sortOptions: [
           { value: 'fullName', label: 'Name (A-Z)' },
-          { value: 'createdAt', label: 'Recently Registered' }
+          { value: 'createdAt', label: 'Recently Registered' },
+          { value: 'membershipExpiry', label: 'Expiry Date' }
         ]
       }
     });
