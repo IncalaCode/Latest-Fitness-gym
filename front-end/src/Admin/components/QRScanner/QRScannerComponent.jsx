@@ -38,9 +38,9 @@ export default function QRScannerComponent() {
   }, [scanning]);
 
   // Handle QR code input
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value);
-  };
+  // const handleInputChange = (e) => {
+  //   setInputValue(e.target.value);
+  // };
 
   // Process QR code when Enter is pressed
   const handleKeyDown = (e) => {
@@ -50,28 +50,67 @@ export default function QRScannerComponent() {
   };
 
   // Process QR code from input
-  const processQRCode = async (qrData) => {
+const processQRCode = async (qrData) => {
+  try {
+    setScanning(true);
+
+    // Try to parse the QR data as JSON
+    let parsedQRData;
     try {
-      setScanning(true);
-
-      // Try to parse the QR data as JSON
-      let parsedQRData;
-      try {
-        parsedQRData = JSON.parse(qrData);
-      } catch (error) {
-        // If not valid JSON, use as is
-        parsedQRData = qrData;
-      }
-
-      // Use the hook to verify the QR code
-      await verifyQRCode(parsedQRData);
+      parsedQRData = JSON.parse(qrData);
     } catch (error) {
-      console.error("QR verification error:", error);
-    } finally {
-      setScanning(false);
-      setInputValue("");
+      // If not valid JSON, use as is
+      parsedQRData = qrData;
     }
-  };
+
+    // Use the hook to verify the QR code
+    await verifyQRCode(parsedQRData);
+  } catch (error) {
+    console.error("QR verification error:", error);
+  } finally {
+    setScanning(false);
+    setInputValue("");
+  }
+};
+
+
+// Handle QR code input
+const handleInputChange = (e) => {
+  const value = e.target.value;
+  setInputValue(value);
+  
+  // Check if the input has content that looks like a complete QR code
+  if (value.trim() && isLikelyCompleteQRCode(value)) {
+    processQRCode(value);
+  }
+};
+
+// Helper function to determine if input looks like a complete QR code
+const isLikelyCompleteQRCode = (input) => {
+  // Check for common QR code patterns:
+  
+  // 1. If it's JSON (common for structured QR codes)
+  try {
+    JSON.parse(input);
+    return true;
+  } catch (e) {
+    // Not JSON
+  }
+  
+  // 2. If it's a UUID or long alphanumeric string
+  if (input.length >= 16 && /^[a-zA-Z0-9\-_]+$/.test(input)) {
+    return true;
+  }
+  
+  // 3. If it's a URL pattern
+  if (input.startsWith('http://') || input.startsWith('https://')) {
+    return true;
+  }
+  
+  // Add more patterns as needed for your specific QR codes
+  
+  return false;
+};
 
   // Function to handle unfreezing a payment
   const handleUnfreezePayment = async (paymentId) => {
