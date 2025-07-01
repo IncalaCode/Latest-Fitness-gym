@@ -176,16 +176,21 @@ if (package.accessLevel !== 'full') {
   const [startHour, startMin] = package.startTime.split(':').map(Number);
   const [endHour, endMin] = package.endTime.split(':').map(Number);
   
-  // Check if current time is within allowed window
-  if (currentHour < startHour ||
-      (currentHour === startHour && currentMinutes < startMin) ||
-      currentHour > endHour ||
-      (currentHour === endHour && currentMinutes > endMin)) {
+  // Add 2-hour buffer to start time (earlier access) and end time (later access)
+  const bufferStartHour = (startHour - 2 + 24) % 24; // Handle negative hours
+  const bufferEndHour = (endHour + 2) % 24; // Handle hours > 23
+  
+  // Check if current time is within allowed window (with 2-hour buffer)
+  if (currentHour < bufferStartHour ||
+      (currentHour === bufferStartHour && currentMinutes < startMin) ||
+      currentHour > bufferEndHour ||
+      (currentHour === bufferEndHour && currentMinutes > endMin)) {
     return res.status(400).json({
       success: false,
-      message: `Access not allowed at this time. Package access hours: ${package.startTime} - ${package.endTime}`,
+      message: `Access not allowed at this time. Package access hours: ${package.startTime} - ${package.endTime} (with 24 hour )`,
       currentTime: now.toTimeString().slice(0,5),
-      allowedHours: `${package.startTime} - ${package.endTime}`
+      allowedHours: `${package.startTime} - ${package.endTime}`,
+      bufferHours: `${bufferStartHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')} - ${bufferEndHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`
     });
   }
 }
