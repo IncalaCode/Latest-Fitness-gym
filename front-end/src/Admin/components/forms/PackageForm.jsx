@@ -114,10 +114,7 @@ const PackageForm = ({
     if (formData.accessLevel === 'special' && (!formData.startTime || !formData.endTime)) {
       throw new Error('Start and end time are required for special access packages');
     }
-    if (formData.accessLevel === 'special' && formData.startTime >= formData.endTime) {
-      throw new Error('End time must be after start time');
-    }
-
+    
     const result = await onSubmit(formData, packageData);
 
     if (result && result.success) {

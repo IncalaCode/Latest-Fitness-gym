@@ -45,13 +45,6 @@ if (
           message: 'Start time and end time are required for special access packages'
         });
       }
-
-      if (packageData.startTime >= packageData.endTime) {
-        return res.status(400).json({
-          success: false,
-          message: 'End time must be after start time'
-        });
-      }
     }
 
     if (packageData.benefits && !Array.isArray(packageData.benefits)) {
@@ -210,14 +203,6 @@ exports.updatePackage = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Start time and end time are required for special access packages'
-        });
-      }
-
-      // Validate time format and range
-      if (updateData.startTime >= updateData.endTime) {
-        return res.status(400).json({
-          success: false,
-          message: 'End time must be after start time'
         });
       }
     }
