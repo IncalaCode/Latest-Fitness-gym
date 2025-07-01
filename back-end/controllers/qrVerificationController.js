@@ -141,19 +141,7 @@ async function handleCheckIn(req, res, user, payment, qrData) {
     });
   }
 
-  // Check number of passes
-  if (typeof payment.totalPasses === 'number' && payment.totalPasses !== null) {
-    if (payment.totalPasses <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No remaining passes for this membership',
-        qrData: qrData
-      });
-    }
-    // Decrement totalPasses
-    payment.totalPasses -= 1;
-    await payment.save();
-  }
+  
 const package = await Package.findOne({
   where: {
       id: payment.productId,
@@ -224,7 +212,19 @@ if (package.accessLevel !== 'full') {
       qrData: qrData
     });
   }
-
+  // Check number of passes
+  if (typeof payment.totalPasses === 'number' && payment.totalPasses !== null) {
+    if (payment.totalPasses <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No remaining passes for this membership',
+        qrData: qrData
+      });
+    }
+    // Decrement totalPasses
+    payment.totalPasses -= 1;
+    await payment.save();
+  }
   // Create new check-in record
   const newCheckIn = await CheckIn.create({
     userId: payment.userId,
