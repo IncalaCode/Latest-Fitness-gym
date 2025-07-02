@@ -27,7 +27,7 @@ const generatePermanentQRData = (payment, user) => {
     status: 'active',
     expiryDate: payment.expiryDate,
     permanentCode: permanentSignature.substring(0, 8),
-    signature: permanentSignature,
+    // signature: permanentSignature,
     generatedOn: new Date().toISOString(),
     isPermanent: true
   };
@@ -146,3 +146,6 @@ async function getTotalRevenue() {
   return result.get('totalRevenue') || 0;
 }
 exports.getTotalRevenue = getTotalRevenue;
+
+
+

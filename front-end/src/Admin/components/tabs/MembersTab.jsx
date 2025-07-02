@@ -947,20 +947,39 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
               {loadingQrCode ? (
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               ) : (
-                <QRCodeSVG
-                  value={qrCodeData || "No membership data available"}
-                  size={200}
-                  level="H"
-                  margin={10}
-                  imageSettings={{
-                    src: "/logo.png",
-                    x: undefined,
-                    y: undefined,
-                    height: 40,
-                    width: 40,
-                    excavate: true,
-                  }}
-                />
+                (() => {
+                  let parsed = {};
+                  if (typeof qrCodeData === "string") {
+                    try {
+                      parsed = JSON.parse(qrCodeData);
+                    } catch {
+                      parsed = {};
+                    }
+                  } else if (typeof qrCodeData === "object" && qrCodeData !== null) {
+                    parsed = qrCodeData;
+                  }
+                  return (
+                    <QRCodeSVG
+                      value={JSON.stringify({
+                        paymentId: parsed.paymentId,
+                        userId: parsed.userId,
+                        isTemporary:  parsed.isTemporary,
+                        status: parsed.status
+                      })}
+                      size={200}
+                      level="H"
+                      margin={10}
+                      imageSettings={{
+                        src: "/logo.png",
+                        x: undefined,
+                        y: undefined,
+                        height: 40,
+                        width: 40,
+                        excavate: true,
+                      }}
+                    />
+                  );
+                })()
               )}
             </div>
 

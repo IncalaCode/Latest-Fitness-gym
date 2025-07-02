@@ -33,7 +33,22 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
   
   const generateQRValue = () => {
     if (qrCodeData) {
-      return JSON.stringify(qrCodeData);
+      let parsed = {};
+      if (typeof qrCodeData === "string") {
+        try {
+          parsed = JSON.parse(qrCodeData);
+        } catch {
+          parsed = {};
+        }
+      } else if (typeof qrCodeData === "object" && qrCodeData !== null) {
+        parsed = qrCodeData;
+      }
+      return JSON.stringify({
+        paymentId: parsed.paymentId,
+        userId: parsed.userId,
+        isTemporary:  parsed.isTemporary,
+        status: parsed.status
+      });
     }
     return `INVALID_${userData?.id || '12345'}`;
   };

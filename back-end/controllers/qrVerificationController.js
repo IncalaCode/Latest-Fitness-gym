@@ -234,7 +234,6 @@ if (package.accessLevel !== 'full') {
     notes: `Check-in via QR code for ${payment.planTitle} membership`
   });
 
-  payment.qrCodeData = JSON.stringify(qrData)
   await payment.save()
 
   return res.status(201).json({
