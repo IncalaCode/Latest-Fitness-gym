@@ -44,10 +44,7 @@ const CheckInCode = ({ userData, qrCodeData, hasPendingInCashPayment, paymentMes
         parsed = qrCodeData;
       }
       return JSON.stringify({
-        paymentId: parsed.paymentId,
-        userId: parsed.userId,
-        isTemporary:  parsed.isTemporary,
-        status: parsed.status
+        paymentId: parsed.paymentId
       });
     }
     return `INVALID_${userData?.id || '12345'}`;

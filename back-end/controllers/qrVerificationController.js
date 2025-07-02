@@ -10,17 +10,34 @@ exports.verifyQRCode = async (req, res) => {
     const qrData = JSON.parse(req.body.qrData);
     qrData.scanned = true;
 
-    // Basic validation
-    if (!qrData || !qrData.paymentId || !qrData.userId) {
+    // Now only paymentId is expected from qrData
+    if (!qrData || !qrData.paymentId) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid QR code data'
+        message: 'Invalid QR code data: paymentId required'
       });
     }
 
-    // Verify the user exists
+    // Fetch the payment using paymentId
+    const payment = await Payment.findOne({
+      where: { id: qrData.paymentId }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+
+    // Extract userId, isTemporary, and status from payment
+    const userId = payment.userId;
+    const isTemporary = payment.isTemporary;
+    const status = payment.status || payment.paymentstatus; // fallback to paymentstatus if status is not present
+
+    // Fetch the user
     const user = await User.findOne({
-      where: { id: qrData.userId },
+      where: { id: userId },
       attributes: {
         exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires']
       }
@@ -33,41 +50,24 @@ exports.verifyQRCode = async (req, res) => {
       });
     }
 
-    // Verify the payment exists
-    const payment = await Payment.findOne({
-      where: {
-        id: qrData.paymentId,
-        userId: qrData.userId
-      }
-    });
-
-    if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment record not found'
-      });
-    }
-
+    // Compose qrData for downstream logic
+    qrData.userId = userId;
+    qrData.isTemporary = isTemporary;
+    qrData.status = status;
 
     // Process based on QR code type
-    if (qrData.isTemporary && qrData.status === 'pending') {
+    if (isTemporary && status === 'pending') {
       // HANDLE PENDING PAYMENT
-
-      // Verify payment is still pending
       if (payment.paymentstatus !== 'pending' && payment.paymentstatus !== 'approvalPending') {
-        // If payment is completed, proceed to check-in
         if (payment.paymentstatus === 'completed') {
           return await handleCheckIn(req, res, user, payment, qrData);
         }
-
         return res.status(400).json({
           success: false,
           message: `Payment is already ${payment.paymentstatus}`,
           qrData: qrData
         });
       }
-
-      // Return payment details for staff to approve
       return res.status(200).json({
         success: true,
         message: 'Payment pending approval',
@@ -84,12 +84,10 @@ exports.verifyQRCode = async (req, res) => {
         },
         qrData: qrData
       });
-
-    } else if (!qrData.isTemporary && qrData.status === 'active') {
+    } else if (!isTemporary && status === 'active') {
       // HANDLE CHECK-IN FOR ACTIVE MEMBERSHIP
       return await handleCheckIn(req, res, user, payment, qrData);
     } else {
-      // If QR code doesn't match expected types
       return res.status(400).json({
         success: false,
         message: 'Invalid QR code type',

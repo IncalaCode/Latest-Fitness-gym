@@ -961,10 +961,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                   return (
                     <QRCodeSVG
                       value={JSON.stringify({
-                        paymentId: parsed.paymentId,
-                        userId: parsed.userId,
-                        isTemporary:  parsed.isTemporary,
-                        status: parsed.status
+                        paymentId: parsed.paymentId
                       })}
                       size={200}
                       level="H"
