@@ -84,7 +84,7 @@ exports.verifyQRCode = async (req, res) => {
         },
         qrData: qrData
       });
-    } else if (!isTemporary && status === 'active') {
+    } else if (!isTemporary && status === 'completed') {
       // HANDLE CHECK-IN FOR ACTIVE MEMBERSHIP
       return await handleCheckIn(req, res, user, payment, qrData);
     } else {
