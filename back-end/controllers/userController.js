@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User , Payment, Package } = require('../models');
+const { User, Payment, Package } = require('../models');
 const { Trainer } = require('../models');
 const { Op } = require('sequelize');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
@@ -8,7 +8,9 @@ const crypto = require('crypto');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { sequelize } = require('../models');
 
+// Multer setup for profile photo uploads
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
     const uploadDir = 'uploads/profile';
@@ -24,7 +26,6 @@ const storage = multer.diskStorage({
   }
 });
 
-
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -33,17 +34,15 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Initialize multer upload
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024
-  },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
 exports.uploadProfilePhoto = upload.single('photo');
 
+// User registration
 exports.register = async (req, res) => {
   try {
     const {
@@ -64,13 +63,9 @@ exports.register = async (req, res) => {
 
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered'
-      });
+      return res.status(400).json({ success: false, message: 'Email already registered' });
     }
     
-    // Use provided password or default to "123456"
     const userPassword = password || "123456";
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userPassword, salt);
@@ -89,7 +84,7 @@ exports.register = async (req, res) => {
       medicalConditions,
       photoUrl,
       agreeToTerms,
-      emergencyContact : ""
+      emergencyContact: ""
     });
 
     // await sendWelcomeEmail(user);
@@ -112,52 +107,36 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
+// Forgot password
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     const resetTokenExpiry = Date.now() + 3600000; // 1 hour
-
     user.forgetPasswordToken = resetToken;
     user.forgetPasswordExpires = new Date(resetTokenExpiry);
     await user.save();
 
     // await sendPasswordResetEmail(user, resetToken);
-
-    res.status(200).json({
-      success: true,
-      message: 'Password reset email sent'
-    });
+    res.status(200).json({ success: true, message: 'Password reset email sent' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
+// Reset password
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
-
     const user = await User.findOne({
       where: {
         forgetPasswordToken: token,
@@ -166,66 +145,53 @@ exports.resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
     user.password = hashedPassword;
     user.forgetPasswordToken = null;
     user.forgetPasswordExpires = null;
     await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: 'Password has been reset'
-    });
+    res.status(200).json({ success: true, message: 'Password has been reset' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
+// Get all users with filtering, sorting, and pagination
 exports.getAllUsers = async (req, res) => {
-    try {
-      // Extract query parameters
-      const {
-        search = '',
-        packageId = '',
-        expirationStatus = '',
-        sortBy = 'fullName',
-        sortOrder = 'asc',
-        page = 1,
-        limit = 10
-      } = req.query;
+  try {
+    const {
+      search = '',
+      packageId = '',
+      expirationStatus = '',
+      sortBy = 'fullName',
+      sortOrder = 'asc',
+      page = 1,
+      limit = 10
+    } = req.query;
 
-      // Calculate offset for pagination
-      const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit;
+    const userWhereClause = {};
+    if (search) {
+      userWhereClause[Op.or] = [
+        { fullName: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
+      ];
+    }
 
-      // Build where clause for User model
-      const userWhereClause = {};
-      
-      // Search functionality
-      if (search) {
-        userWhereClause[Op.or] = [
-          { fullName: { [Op.like]: `%${search}%` } },
-          { email: { [Op.like]: `%${search}%` } }
-        ];
-      }
-
-      // Get users with trainer information
-      const users = await User.findAll({
+    let users;
+    let totalUsers;
+    // For sortBy membership, membershipExpiry, or createdAt, fetch all users and sort in JS
+    if (sortBy === 'membership' || sortBy === 'membershipExpiry' || sortBy === 'createdAt') {
+      users = await User.findAll({
         where: userWhereClause,
-        attributes: { 
-          include: ['trainerId'], 
-          exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
+        attributes: {
+          include: ['trainerId'],
+          exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires']
         },
         include: [
           {
@@ -234,167 +200,206 @@ exports.getAllUsers = async (req, res) => {
             attributes: ['id', 'name', 'email', 'phone'],
             required: false
           }
-        ],
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      });
-
-      // Get all active payments for filtering
-      const activePayments = await Payment.findAll({
-        where: {
-          paymentstatus: 'completed',
-          expiryDate: {
-            [Op.gt]: new Date()
-          }
-        },
-        attributes: [
-          'userId',
-          'planTitle',
-          'expiryDate',
-          'qrCodeData',
-          'id',
-          'isFrozen',
-          'freezeStartDate',
-          'freezeEndDate',
-          'originalExpiryDate',
-          'productId',
-          'totalPasses'
         ]
       });
-
-      const userPaymentMap = {};
-      activePayments.forEach(payment => {
-        const paymentData = payment.get({ plain: true });
-        if (!userPaymentMap[paymentData.userId] ||
-            new Date(paymentData.expiryDate) > new Date(userPaymentMap[paymentData.userId].expiryDate)) {
-          userPaymentMap[paymentData.userId] = paymentData;
+      totalUsers = users.length;
+    } else {
+      users = await User.findAll({
+      where: userWhereClause,
+      attributes: { 
+        include: ['trainerId'], 
+        exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
+      },
+      include: [
+        {
+          model: Trainer,
+          as: 'trainer',
+          attributes: ['id', 'name', 'email', 'phone'],
+          required: false
         }
+      ],
+      limit: parseInt(limit),
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      offset: parseInt(offset)
+    });
+      totalUsers = await User.count({ where: userWhereClause });
+    }
+
+    // Get payments for filtering
+    let payments;
+    if (expirationStatus === 'frozen') {
+      // Fetch all completed, frozen payments (even expired)
+      payments = await Payment.findAll({
+        where: {
+          paymentstatus: 'completed',
+          isFrozen: 1
+        },
+        attributes: [
+          'userId', 'planTitle', 'expiryDate', 'qrCodeData', 'id', 'isFrozen',
+          'freezeStartDate', 'freezeEndDate', 'originalExpiryDate', 'productId', 'totalPasses'
+        ]
       });
-
-      // Process users and apply membership data
-      let usersWithMembership = users.map(user => {
-        const userData = user.get({ plain: true });
-        const userPayment = userPaymentMap[userData.id];
-
-        if (userPayment) {
-          userData.membership = userPayment.planTitle;
-          userData.membershipStatus = 'active';
-          userData.membershipExpiry = userPayment.expiryDate;
-          userData.qrcodeData = userPayment.qrCodeData;
-          userData.paymentId = userPayment.id;
-          userData.isFrozen = userPayment.isFrozen || false;
-          userData.freezeStartDate = userPayment.freezeStartDate;
-          userData.freezeEndDate = userPayment.freezeEndDate;
-          userData.originalExpiryDate = userPayment.originalExpiryDate;
-          userData.totalPasses = userPayment.totalPasses || 0;
-        } else {
-          userData.membership = 'None';
-          userData.membershipStatus = 'inactive';
-          userData.isFrozen = false;
-          userData.totalPasses = 0;
-        }
-
-        return userData;
-      });
-
-      // Apply package type filter
-      if (packageId) {
-        // Filter by package ID from payments
-        const filteredPayments = activePayments.filter(payment => 
-          payment.productId === packageId
-        );
-        const filteredUserIds = filteredPayments.map(payment => payment.userId);
-        usersWithMembership = usersWithMembership.filter(user => 
-          filteredUserIds.includes(user.id)
-        );
-      }
-
-      // Apply expiration status filter
-      if (expirationStatus) {
-        switch (expirationStatus) {
-          case 'active':
-            usersWithMembership = usersWithMembership.filter(user => 
-              user.membershipStatus === 'active' && !user.isFrozen
-            );
-            break;
-          case 'frozen':
-            usersWithMembership = usersWithMembership.filter(user => 
-              user.membershipStatus === 'active' && user.isFrozen
-            );
-            break;
-          case 'inactive':
-            usersWithMembership = usersWithMembership.filter(user => 
-              user.membershipStatus === 'inactive'
-            );
-            break;
-        }
-      }
-
-      // Apply sorting after processing membership data
-      if (sortBy === 'membershipExpiry') {
-        usersWithMembership.sort((a, b) => {
-          const dateA = a.membershipExpiry ? new Date(a.membershipExpiry) : new Date('9999-12-31');
-          const dateB = b.membershipExpiry ? new Date(b.membershipExpiry) : new Date('9999-12-31');
-          
-          if (sortOrder === 'asc') {
-            return dateA - dateB;
-          } else {
-            return dateB - dateA;
-          }
-        });
-      } else {
-        // For other sort fields, sort the original users array
-        users.sort((a, b) => {
-          const aValue = a[sortBy] || '';
-          const bValue = b[sortBy] || '';
-          
-          if (sortOrder === 'asc') {
-            return aValue.localeCompare(bValue);
-          } else {
-            return bValue.localeCompare(aValue);
-          }
-        });
-        
-        // Re-map the sorted users to include membership data
-        const sortedUserIds = users.map(user => user.id);
-        const userMap = {};
-        usersWithMembership.forEach(user => {
-          userMap[user.id] = user;
-        });
-        
-        usersWithMembership = sortedUserIds.map(id => userMap[id]).filter(Boolean);
-      }
-
-      // Get total count for pagination (without limit/offset)
-      const totalUsers = await User.count({ where: userWhereClause });
-      const totalPages = Math.ceil(totalUsers / limit);
-
-      res.status(200).json({
-        success: true,
-        count: usersWithMembership.length,
-        totalCount: totalUsers,
-        currentPage: parseInt(page),
-        totalPages,
-        data: usersWithMembership,
-        filters: {
-          search,
-          packageId,
-          expirationStatus,
-          sortBy,
-          sortOrder
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching users with membership:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Server Error',
-        error: error.message
+    } else {
+      // Default: only active (not expired) payments
+      payments = await Payment.findAll({
+        where: {
+          paymentstatus: 'completed',
+          expiryDate: { [Op.gt]: new Date() }
+        },
+        attributes: [
+          'userId', 'planTitle', 'expiryDate', 'qrCodeData', 'id', 'isFrozen',
+          'freezeStartDate', 'freezeEndDate', 'originalExpiryDate', 'productId', 'totalPasses'
+        ]
       });
     }
-  };
 
+    const userPaymentMap = {};
+    payments.forEach(payment => {
+      const paymentData = payment.get({ plain: true });
+      if (!userPaymentMap[paymentData.userId] ||
+          new Date(paymentData.expiryDate) > new Date(userPaymentMap[paymentData.userId].expiryDate)) {
+        userPaymentMap[paymentData.userId] = paymentData;
+      }
+    });
 
+    // Process users and apply membership data
+    let usersWithMembership = users.map(user => {
+      const userData = user.get({ plain: true });
+      const userPayment = userPaymentMap[userData.id];
+
+      if (userPayment) {
+        userData.membership = userPayment.planTitle;
+        userData.membershipStatus = 'active';
+        userData.membershipExpiry = userPayment.expiryDate;
+        userData.qrcodeData = userPayment.qrCodeData;
+        userData.paymentId = userPayment.id;
+        userData.isFrozen = userPayment.isFrozen || false;
+        userData.freezeStartDate = userPayment.freezeStartDate;
+        userData.freezeEndDate = userPayment.freezeEndDate;
+        userData.originalExpiryDate = userPayment.originalExpiryDate;
+        userData.totalPasses = userPayment.totalPasses || 0;
+      } else {
+        userData.membership = 'None';
+        userData.membershipStatus = 'inactive';
+        userData.isFrozen = false;
+        userData.totalPasses = 0;
+      }
+
+      return userData;
+    });
+
+    // Apply package type filter
+    if (packageId) {
+      const filteredPayments = payments.filter(payment => 
+        payment.productId === packageId
+      );
+      const filteredUserIds = filteredPayments.map(payment => payment.userId);
+      usersWithMembership = usersWithMembership.filter(user => 
+        filteredUserIds.includes(user.id)
+      );
+    }
+
+    // Apply expiration status filter
+    if (expirationStatus) {
+      switch (expirationStatus) {
+        case 'active':
+          usersWithMembership = usersWithMembership.filter(user => 
+            user.membershipStatus === 'active' && !user.isFrozen
+          );
+          break;
+        case 'frozen':
+          usersWithMembership = usersWithMembership.filter(user => 
+            user.membershipStatus === 'active' && user.isFrozen
+          );
+          break;
+        case 'inactive':
+          usersWithMembership = usersWithMembership.filter(user => 
+            user.membershipStatus === 'inactive'
+          );
+          break;
+        default:
+          // Unknown or empty filter: do not filter, show all
+          break;
+      }
+    }
+
+    // Apply sorting after processing membership data
+    if (sortBy === 'membershipExpiry') {
+      usersWithMembership.sort((a, b) => {
+        const dateA = a.membershipExpiry ? new Date(a.membershipExpiry) : new Date('9999-12-31');
+        const dateB = b.membershipExpiry ? new Date(b.membershipExpiry) : new Date('9999-12-31');
+        if (sortOrder === 'asc') {
+          return dateA - dateB;
+        } else {
+          return dateB - dateA;
+        }
+      });
+    } else if (sortBy === 'membership') {
+      usersWithMembership.sort((a, b) => {
+        const aValue = a.membership || '';
+        const bValue = b.membership || '';
+        if (sortOrder === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      });
+    } else if (sortBy === 'createdAt') {
+      usersWithMembership.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        if (sortOrder === 'asc') {
+          return dateA - dateB;
+        } else {
+          return dateB - dateA;
+        }
+      });
+    } else {
+      usersWithMembership.sort((a, b) => {
+        const aValue = a[sortBy] || '';
+        const bValue = b[sortBy] || '';
+        if (sortOrder === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      });
+    }
+
+    // Set total count BEFORE slicing for pagination (for all cases)
+    totalUsers = usersWithMembership.length;
+    // Paginate after sorting and filtering
+    const offsetVal = (page - 1) * limit;
+    usersWithMembership = usersWithMembership.slice(offsetVal, offsetVal + parseInt(limit));
+
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    res.status(200).json({
+      success: true,
+      count: usersWithMembership.length,
+      totalCount: totalUsers,
+      currentPage: parseInt(page),
+      totalPages,
+      data: usersWithMembership,
+      filters: {
+        search,
+        packageId,
+        expirationStatus,
+        sortBy,
+        sortOrder
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users with membership:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// Get user by ID
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id, {
@@ -421,6 +426,7 @@ exports.getUserById = async (req, res) => {
   }
 };
 
+// Update user
 exports.updateUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -502,6 +508,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+// Delete user
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -528,6 +535,7 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+// Get filter options
 exports.getFilterOptions = async (req, res) => {
   try {
     // Get all active packages

@@ -620,7 +620,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
                       >
                         <MenuItem value="">All Packages</MenuItem>
                         {filterOptions.packages && filterOptions.packages.map((pkg) => (
-                          <MenuItem key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price} ETB</MenuItem>
+                          <MenuItem key={pkg.id} value={pkg.id}>{pkg.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
@@ -1077,7 +1077,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
               {packages
                 .filter(pkg => pkg.isActive !== false)
                 .map(pkg => (
-                  <MenuItem key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price} ETB</MenuItem>
+                  <MenuItem key={pkg.id} value={pkg.id}>{pkg.name}</MenuItem>
                 ))}
             </TextField>
           </div>
