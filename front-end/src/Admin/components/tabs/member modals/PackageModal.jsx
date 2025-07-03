@@ -174,7 +174,7 @@ export default function PackageModal({ isOpen, onClose, member }) {
       // Prepare the data to send
       const paymentData = {
         userId: member.id,
-        planTitle: `${selectedPackage.type} - ${selectedPackage.duration}`,
+        planTitle: `${selectedPackage.type}`,
         amount: Number(cleanAmount),
         gender: selectedPackage.gender,
         duration: formattedDuration,
@@ -300,20 +300,34 @@ export default function PackageModal({ isOpen, onClose, member }) {
             ref={qrCodeRef}
             className="flex justify-center items-center bg-white p-4 rounded-lg shadow-inner mb-6"
           >
-            <QRCodeSVG
-              value={qrCodeData}
-              size={200}
-              level="H"
-              includeMargin={true}
-              imageSettings={{
-                src: "/logo.png",
-                x: undefined,
-                y: undefined,
-                height: 40,
-                width: 40,
-                excavate: true,
-              }}
-            />
+            {(() => {
+              let parsed = {};
+              if (typeof qrCodeData === "string") {
+                try {
+                  parsed = JSON.parse(qrCodeData);
+                } catch {
+                  parsed = {};
+                }
+              } else if (typeof qrCodeData === "object" && qrCodeData !== null) {
+                parsed = qrCodeData;
+              }
+              return (
+                <QRCodeSVG
+                  value={JSON.stringify({ paymentId: parsed.paymentId })}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                  imageSettings={{
+                    src: "/logo.png",
+                    x: undefined,
+                    y: undefined,
+                    height: 40,
+                    width: 40,
+                    excavate: true,
+                  }}
+                />
+              );
+            })()}
           </div>
           
           <div className="text-center mb-4">

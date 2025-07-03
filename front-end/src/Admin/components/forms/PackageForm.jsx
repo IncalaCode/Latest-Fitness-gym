@@ -106,7 +106,7 @@ const PackageForm = ({
     // ⛔ Enforce: passes < duration
     const passes = parseInt(formData.numberOfPasses);
     const duration = parseInt(formData.duration);
-    if (passes >= duration) {
+    if (passes > duration ) {
       throw new Error('Number of passes must be less than the duration');
     }
 

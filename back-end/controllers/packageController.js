@@ -23,7 +23,7 @@ exports.createPackage = async (req, res) => {
 // Validate numberOfPasses < duration
 if (
   packageData.numberOfPasses &&
-  parseInt(packageData.numberOfPasses) >= parseInt(packageData.duration)
+  parseInt(packageData.numberOfPasses) > parseInt(packageData.duration)
 ) {
   return res.status(400).json({
     success: false,
@@ -194,6 +194,13 @@ exports.updatePackage = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Duration must be a positive number'
+      });
+    }
+
+    if (updateData.numberOfPasses !== undefined && parseInt(updateData.numberOfPasses) > parseInt(updateData.duration)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Number of passes must be less than the duration'
       });
     }
 

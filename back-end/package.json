@@ -10,7 +10,8 @@
     "test": "jest",
     "seed": "node seeder/index.js",
     "migrate": "npx sequelize-cli db:migrate",
-    "test-auth": "node test/test-auth.js"
+    "test-auth": "node test/test-auth.js",
+    "fix": "node seeder/fixPayments.js"
   },
   "keywords": [
     "student",
@@ -36,6 +37,7 @@
     "sequelize": "^6.37.6",
     "sequelize-auto-migrations": "^1.0.3",
     "sequelize-cli": "^6.6.2",
+    "string-cosine-similarity": "^2.0.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

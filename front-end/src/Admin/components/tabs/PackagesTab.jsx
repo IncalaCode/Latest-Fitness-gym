@@ -399,25 +399,26 @@ const PackagesTab = () => {
                         )}
                       </TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => handleEditPackage(pkg)}
-                    >
-                      Edit
-                    </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="error"
-                          onClick={() => deleteHook.handleDeleteClick(pkg)}
-                          sx={{ ml: 1 }}
-                          disabled={deleteHook.deleting}
-                        >
-                          {deleteHook.deleting && deleteHook.pendingDelete && deleteHook.pendingDelete.id === pkg.id ? (
-                            <CircularProgress size={18} color="inherit" />
-                          ) : 'Delete'}
-                        </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1, minWidth: 120 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleEditPackage(pkg)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => deleteHook.handleDeleteClick(pkg)}
+                        disabled={deleteHook.deleting}
+                      >
+                        {deleteHook.deleting && deleteHook.pendingDelete && deleteHook.pendingDelete.id === pkg.id ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : 'Delete'}
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
