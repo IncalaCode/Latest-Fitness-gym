@@ -218,7 +218,7 @@ exports.getAllUsers = async (req, res) => {
           required: false
         }
       ],
-      limit: parseInt(limit),
+      // limit: parseInt(limit),
       order: [[sortBy, sortOrder.toUpperCase()]],
       offset: parseInt(offset)
     });
