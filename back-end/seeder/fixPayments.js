@@ -26,25 +26,25 @@ function daysBetween(date1, date2) {
   const packages = await Package.findAll();
   let updated = 0;
   for (const payment of payments) {
-    // Find best matching package by cosine similarity
-    let bestScore = 0;
-    let bestPkg = null;
+    // Find matching package by normalized name equality
+    let matchedPkg = null;
+    const normalizedTitle = payment.planTitle.trim().toLowerCase();
     for (const pkg of packages) {
-      const score = cosineSimilarity(payment.planTitle.toLowerCase(), pkg.name.toLowerCase());
-      if (score > bestScore) {
-        bestScore = score;
-        bestPkg = pkg;
+      const normalizedPkgName = pkg.name.trim().toLowerCase();
+      if (normalizedTitle === normalizedPkgName) {
+        matchedPkg = pkg;
+        break;
       }
     }
-    if (bestPkg && bestScore > 0.5) { // Only update if reasonably similar
+    if (matchedPkg) {
       const daysLeft = daysBetween(now, payment.expiryDate);
-      payment.productId = bestPkg.id;
+      payment.productId = matchedPkg.id;
       payment.totalPasses = daysLeft;
       await payment.save();
-      console.log(`Updated payment ${payment.id}: productId=${bestPkg.id}, totalPasses=${daysLeft}`);
+      console.log(`Updated payment ${payment.id}: productId=${matchedPkg.id}, totalPasses=${daysLeft}`);
       updated++;
     } else {
-      console.log(`No good package match for payment ${payment.id} (${payment.planTitle})`);
+      console.log(`No exact package match for payment ${payment.id} (${payment.planTitle})`);
     }
   }
   console.log(`Done. Updated ${updated} payments.`);
