@@ -1,1042 +1,1196 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { User , Payment, Package } = require('../models');
-const { Trainer } = require('../models');
-const { Op } = require('sequelize');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
-const crypto = require('crypto');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-// const { sequelize } = require('../config/database');
-const { sequelize } = require('../models');
+import { useState, useEffect, useRef } from "react";
+import useMembers from "../../../hooks/useMembers";
+import useFilterOptions from "../../../hooks/useFilterOptions";
+import { IMAGE_URL, API_URL } from "../../../config/config";
+import { Phone, MapPin, AlertCircle, Calendar, UserPlus, QrCode, Snowflake, Search, Filter } from "lucide-react";
+import { Link } from "react-router-dom";
+import { QRCodeSVG } from 'qrcode.react';
+import { useSnackbar } from 'notistack';
+import PackageModal from "./member modals/PackageModal";
+import FreezeModal from "./member modals/FreezeModal";
+import TrainerReassignModal from "./member modals/TrainerReassignModal";
+import useTrainers from "../../hooks/useTrainers";
+import usePackages from '../../hooks/usePackages';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Checkbox,
+  Button,
+  Snackbar,
+  CircularProgress,
+  TableSortLabel,
+  TextField,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControlLabel,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
+  Card,
+  CardContent,
+  Typography
+} from '@mui/material';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    const uploadDir = 'uploads/profile';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function(req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + ext);
-  }
-});
+export default function MembersTabUpdated({ rowsPerPage = 10 }) {
+  const {
+    members,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalMembers,
+    filters,
+    handlePageChange,
+    updateFilters,
+    handleSearch,
+    handleSort,
+    refetch,
+    reassignOrRemoveTrainer
+  } = useMembers(rowsPerPage);
+  
+  const { filterOptions, loading: filterOptionsLoading } = useFilterOptions();
+  const { trainers } = useTrainers();
+  const { packages } = usePackages();
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [loadingQrCode, setLoadingQrCode] = useState(false);
+  const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const qrCodeRef = useRef(null);
+  const { enqueueSnackbar } = useSnackbar();
+  const [selected, setSelected] = useState([]);
+  const [bulkDeleteSnackbarOpen, setBulkDeleteSnackbarOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const bulkDeleteTimeoutRef = useRef(null);
+  const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    format: 'csv',
+    fields: ['name', 'email', 'membership', 'membershipStatus', 'phone', 'emergencyContact', 'address', 'birthYear']
+  });
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Not an image! Please upload only images.'), false);
-  }
-};
+  const [trainerModalOpen, setTrainerModalOpen] = useState(false);
+  const [trainerModalLoading, setTrainerModalLoading] = useState(false);
 
-// Initialize multer upload
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024
-  },
-  fileFilter: fileFilter
-});
+  // Upgrade package dialog state
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [upgradeMember, setUpgradeMember] = useState(null);
+  const [selectedPackageId, setSelectedPackageId] = useState('');
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
 
-exports.uploadProfilePhoto = upload.single('photo');
+  // Action modal state
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [selectedMemberForAction, setSelectedMemberForAction] = useState(null);
 
-exports.register = async (req, res) => {
-  try {
-    const {
-      fullName,
-      email,
-      password,
-      phone,
-      emergencyContactName,
-      emergencyContactPhone,
-      emergencyContactRelationship,
-      dateOfBirth,
-      address,
-      fitnessGoals,
-      medicalConditions,
-      photoUrl,
-      agreeToTerms
-    } = req.body;
-
-    const userExists = await User.findOne({ where: { email } });
-    if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered'
-      });
-    }
-    
-    // Use provided password or default to "123456"
-    const userPassword = password || "123456";
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(userPassword, salt);
-
-    const user = await User.create({
-      fullName,
-      email,
-      password: hashedPassword,
-      phone,
-      emergencyContactName,
-      emergencyContactPhone,
-      emergencyContactRelationship,
-      dateOfBirth,
-      address,
-      fitnessGoals,
-      medicalConditions,
-      photoUrl,
-      agreeToTerms,
-      emergencyContact : ""
-    });
-
-    // await sendWelcomeEmail(user);
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        photoUrl: user.photoUrl
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
-
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
-
-    user.forgetPasswordToken = resetToken;
-    user.forgetPasswordExpires = new Date(resetTokenExpiry);
-    await user.save();
-
-    // await sendPasswordResetEmail(user, resetToken);
-
-    res.status(200).json({
-      success: true,
-      message: 'Password reset email sent'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
-
-exports.resetPassword = async (req, res) => {
-  try {
-    const { token, password } = req.body;
-
-    const user = await User.findOne({
-      where: {
-        forgetPasswordToken: token,
-        forgetPasswordExpires: { $gt: new Date() }
-      }
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    user.password = hashedPassword;
-    user.forgetPasswordToken = null;
-    user.forgetPasswordExpires = null;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Password has been reset'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
-
-exports.getAllUsers = async (req, res) => {
-  try {
-    const {
-      search = '',
-      packageId = '',
-      expirationStatus = '',
-      sortBy = 'fullName',
-      sortOrder = 'asc',
-      page = 1,
-      limit = 10
-    } = req.query;
-
-    const offset = (page - 1) * limit;
-    const replacements = {
-      search: `%${search}%`,
-      limit: parseInt(limit),
-      offset: parseInt(offset)
+  // Check if screen is mobile size
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
     };
 
-    // --- Scalable sorting by package name (membership) ---
-    if (sortBy === 'membership') {
-      // Build WHERE clause for search
-      let whereClause = '';
-      if (search) {
-        whereClause = `WHERE u.fullName LIKE :search OR u.email LIKE :search`;
-      }
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
 
-      // Add packageId filter
-      let havingClause = '';
-      if (packageId) {
-        havingClause = `HAVING membershipProductId = :packageId`;
-        replacements.packageId = packageId;
-      }
+  // Handle search input change with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(search);
+    }, 500);
 
-      // Add expirationStatus filter
-      let statusHaving = '';
-      if (expirationStatus) {
-        if (havingClause) statusHaving += ' AND ';
-        else statusHaving += 'HAVING ';
-        if (expirationStatus === 'active') {
-          statusHaving += 'membershipStatus = "active" AND (isFrozen IS NULL OR isFrozen = 0)';
-        } else if (expirationStatus === 'frozen') {
-          statusHaving += 'membershipStatus = "active" AND isFrozen = 1';
-        } else if (expirationStatus === 'inactive') {
-          statusHaving += 'membershipStatus = "inactive"';
-        }
-      }
+    return () => clearTimeout(timeoutId);
+  }, [search]);
 
-      // Compose the SQL
-      // ... inside getAllUsers, in the raw SQL block:
-let orderBy = '';
-if (sortBy === 'membership') {
-  orderBy = `ORDER BY membership ${sortOrder.toUpperCase()}, u.fullName ASC`;
-} else if (sortBy === 'createdAt') {
-  orderBy = `ORDER BY u.createdAt ${sortOrder.toUpperCase()}`;
-} else {
-  orderBy = `ORDER BY u.fullName ASC`;
-}
+  // Filter functions
+  const handleFilterChange = (filterType, value) => {
+    updateFilters({ [filterType]: value });
+  };
 
-const sql = `
-  SELECT 
-    u.*, 
-    p.planTitle AS membership, 
-    IF(p.id IS NOT NULL, 'active', 'inactive') AS membershipStatus,
-    p.expiryDate AS membershipExpiry,
-    p.qrCodeData AS qrcodeData,
-    p.id AS paymentId,
-    p.isFrozen AS isFrozen,
-    p.freezeStartDate AS freezeStartDate,
-    p.freezeEndDate AS freezeEndDate,
-    p.originalExpiryDate AS originalExpiryDate,
-    p.productId AS membershipProductId,
-    p.totalPasses AS totalPasses,
-    t.id AS trainerId,
-    t.name AS trainerName,
-    t.email AS trainerEmail,
-    t.phone AS trainerPhone
-  FROM Users u
-  LEFT JOIN (
-    SELECT p1.* FROM Payments p1
-    INNER JOIN (
-      SELECT userId, MAX(expiryDate) AS maxExpiry
-      FROM Payments
-      WHERE paymentstatus = 'completed' AND expiryDate > NOW()
-      GROUP BY userId
-    ) p2 ON p1.userId = p2.userId AND p1.expiryDate = p2.maxExpiry
-  ) p ON p.userId = u.id
-  LEFT JOIN Trainers t ON u.trainerId = t.id
-  ${whereClause}
-  ${havingClause}
-  ${statusHaving}
-  ${orderBy}
-  LIMIT :limit OFFSET :offset
-`;
-
-      const users = await sequelize.query(sql, {
-        replacements,
-        type: sequelize.QueryTypes.SELECT
-      });
-
-      // Get total count for pagination
-      const countSql = `
-        SELECT COUNT(DISTINCT u.id) as total
-        FROM Users u
-        LEFT JOIN (
-          SELECT p1.* FROM Payments p1
-          INNER JOIN (
-            SELECT userId, MAX(expiryDate) AS maxExpiry
-            FROM Payments
-            WHERE paymentstatus = 'completed' AND expiryDate > NOW()
-            GROUP BY userId
-          ) p2 ON p1.userId = p2.userId AND p1.expiryDate = p2.maxExpiry
-        ) p ON p.userId = u.id
-        ${whereClause}
-        ${havingClause}
-        ${statusHaving}
-      `;
-      const countResult = await sequelize.query(countSql, {
-        replacements,
-        type: sequelize.QueryTypes.SELECT
-      });
-      const totalUsers = countResult[0].total;
-      const totalPages = Math.ceil(totalUsers / limit);
-
-      res.status(200).json({
-        success: true,
-        count: users.length,
-        totalCount: totalUsers,
-        currentPage: parseInt(page),
-        totalPages,
-        data: users,
-        filters: {
-          search,
-          packageId,
-          expirationStatus,
-          sortBy,
-          sortOrder
-        }
-      });
-      return;
-    }
-
-    // --- Default: Use existing logic for other sort fields ---
-    const userWhereClause = {};
-    if (search) {
-      userWhereClause[Op.or] = [
-        { fullName: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } }
-      ];
-    }
-
-    // Get users with trainer information
-    const users = await User.findAll({
-      where: userWhereClause,
-      attributes: { 
-        include: ['trainerId'], 
-        exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
-      },
-      include: [
-        {
-          model: Trainer,
-          as: 'trainer',
-          attributes: ['id', 'name', 'email', 'phone'],
-          required: false
-        }
-      ],
-      limit: parseInt(limit),
-      order: [[sortBy, sortOrder.toUpperCase()]],
-      offset: parseInt(offset)
+  const clearFilters = () => {
+    updateFilters({
+      packageId: '',
+      expirationStatus: '',
+      sortBy: 'fullName',
+      sortOrder: 'asc'
     });
+  };
 
-    // Get all active payments for filtering
-    const activePayments = await Payment.findAll({
-      where: {
-        paymentstatus: 'completed',
-        expiryDate: {
-          [Op.gt]: new Date()
-        }
-      },
-      attributes: [
-        'userId',
-        'planTitle',
-        'expiryDate',
-        'qrCodeData',
-        'id',
-        'isFrozen',
-        'freezeStartDate',
-        'freezeEndDate',
-        'originalExpiryDate',
-        'productId',
-        'totalPasses'
-      ]
-    });
+  // Function to handle buy button click
+  const handleBuyClick = (member) => {
+    setSelectedMember(member);
+    setIsModalOpen(true);
+  };
 
-    const userPaymentMap = {};
-    activePayments.forEach(payment => {
-      const paymentData = payment.get({ plain: true });
-      if (!userPaymentMap[paymentData.userId] ||
-          new Date(paymentData.expiryDate) > new Date(userPaymentMap[paymentData.userId].expiryDate)) {
-        userPaymentMap[paymentData.userId] = paymentData;
-      }
-    });
+  // Function to close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedMember(null);
+    refetch();
+  };
 
-    // Process users and apply membership data
-    let usersWithMembership = users.map(user => {
-      const userData = user.get({ plain: true });
-      const userPayment = userPaymentMap[userData.id];
+  // Function to handle QR code button click
+  const handleQrCodeClick = (member) => {
+    setSelectedMember(member);
+    setLoadingQrCode(true);
 
-      if (userPayment) {
-        userData.membership = userPayment.planTitle;
-        userData.membershipStatus = 'active';
-        userData.membershipExpiry = userPayment.expiryDate;
-        userData.qrcodeData = userPayment.qrCodeData;
-        userData.paymentId = userPayment.id;
-        userData.isFrozen = userPayment.isFrozen || false;
-        userData.freezeStartDate = userPayment.freezeStartDate;
-        userData.freezeEndDate = userPayment.freezeEndDate;
-        userData.originalExpiryDate = userPayment.originalExpiryDate;
-        userData.totalPasses = userPayment.totalPasses || 0;
+    try {
+      if (member.qrcodeData) {
+        setQrCodeData(member.qrcodeData);
       } else {
-        userData.membership = 'None';
-        userData.membershipStatus = 'inactive';
-        userData.isFrozen = false;
-        userData.totalPasses = 0;
+        const qrCodeInfo = {
+          memberId: member.id,
+          name: member.name,
+          membership: member.membership || 'Not specified',
+          status: member.membershipStatus || 'inactive',
+          expiryDate: member.membershipExpiry || 'Not specified'
+        };
+        setQrCodeData(JSON.stringify(qrCodeInfo));
       }
 
-      return userData;
-    });
+      setShowQrCode(true);
+    } catch (error) {
+      console.error("Error processing QR code data:", error);
+      enqueueSnackbar(`Error processing QR code data: ${error.message}`, {
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right',
+        }
+      });
+    } finally {
+      setLoadingQrCode(false);
+    }
+  };
 
-    // Apply package type filter
-    if (packageId) {
-      const filteredPayments = activePayments.filter(payment => 
-        payment.productId === packageId
-      );
-      const filteredUserIds = filteredPayments.map(payment => payment.userId);
-      usersWithMembership = usersWithMembership.filter(user => 
-        filteredUserIds.includes(user.id)
+  // Function to close QR code modal
+  const closeQrCodeModal = () => {
+    setShowQrCode(false);
+    setQrCodeData(null);
+    setSelectedMember(null);
+  };
+
+  // Function to handle freeze button click
+  const handleFreezeClick = (member, frozen) => {
+    setSelectedMember(member);
+    setIsFrozen(frozen);
+    setIsFreezeModalOpen(true);
+  };
+
+  // Function to close the freeze modal
+  const closeFreezeModal = (success) => {
+    setIsFreezeModalOpen(false);
+    setSelectedMember(null);
+    setIsFrozen(false);
+
+    if (success) {
+      refetch();
+    }
+  };
+
+  // Function to download QR code
+  const downloadQRCode = () => {
+    if (!qrCodeRef.current) return;
+
+    try {
+      const svgElement = qrCodeRef.current.querySelector('svg');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const svgRect = svgElement.getBoundingClientRect();
+      canvas.width = svgRect.width * 2;
+      canvas.height = svgRect.height * 2;
+
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder('utf-8');
+      const svgBase64 = btoa(decoder.decode(encoder.encode(svgData)));
+      const dataURL = 'data:image/svg+xml;base64,' + svgBase64;
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngDataUrl = canvas.toDataURL('image/png');
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngDataUrl;
+        downloadLink.download = `${selectedMember.name}-membership-qr.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+
+      img.src = dataURL;
+
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      enqueueSnackbar("Failed to download QR code. Please try again.", {
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right',
+        }
+      });
+    }
+  };
+
+  // Function to render pagination controls
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisiblePages = isMobile ? 3 : 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          className={`px-2 sm:px-3 py-1 mx-1 my-1 rounded text-sm ${
+            currentPage === i
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300"
+          }`}
+        >
+          {i}
+        </button>
       );
     }
 
-    // Apply expiration status filter
-    if (expirationStatus) {
-      switch (expirationStatus) {
-        case 'active':
-          usersWithMembership = usersWithMembership.filter(user => 
-            user.membershipStatus === 'active' && !user.isFrozen
-          );
-          break;
-        case 'frozen':
-          usersWithMembership = usersWithMembership.filter(user => 
-            user.membershipStatus === 'active' && user.isFrozen
-          );
-          break;
-        case 'inactive':
-          usersWithMembership = usersWithMembership.filter(user => 
-            user.membershipStatus === 'inactive'
-          );
-          break;
-      }
+    return (
+      <div className="flex justify-center mt-6 flex-wrap px-2 sm:px-0">
+        <button
+          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className={`px-2 sm:px-3 py-1 mx-1 my-1 rounded text-sm ${
+            currentPage === 1
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200 hover:bg-gray-300"
+          }`}
+        >
+          Previous
+        </button>
+
+        <div className="flex flex-wrap">
+          {pages}
+        </div>
+
+        <button
+          onClick={() =>
+            handlePageChange(Math.min(totalPages, currentPage + 1))
+          }
+          disabled={currentPage === totalPages}
+          className={`px-2 sm:px-3 py-1 mx-1 my-1 rounded text-sm ${
+            currentPage === totalPages
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200 hover:bg-gray-300"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
+  // Function to render member status badge
+  const renderStatusBadge = (membershipStatus, isFrozen) => {
+    const status = typeof membershipStatus === 'string' ? membershipStatus.toLowerCase() : '';
+
+    if (status === "active" && isFrozen) {
+      return (
+        <span className="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-cyan-100 text-cyan-800">
+          Frozen
+        </span>
+      );
     }
 
-    // Apply sorting after processing membership data
-    if (sortBy === 'membershipExpiry') {
-      usersWithMembership.sort((a, b) => {
-        const dateA = a.membershipExpiry ? new Date(a.membershipExpiry) : new Date('9999-12-31');
-        const dateB = b.membershipExpiry ? new Date(b.membershipExpiry) : new Date('9999-12-31');
-        if (sortOrder === 'asc') {
-          return dateA - dateB;
-        } else {
-          return dateB - dateA;
-        }
+    return (
+      <span
+        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+          status === "active"
+            ? "bg-green-100 text-green-800"
+            : "bg-yellow-100 text-yellow-800"
+        }`}
+      >
+        {status === "active" ? "Active" : "Inactive"}
+      </span>
+    );
+  };
+
+  // Function to render action buttons based on membership status
+  const renderActionButtons = (member) => {
+    return (
+      <button
+        className="bg-blue-500 text-white py-2 px-4 rounded-md cursor-pointer hover:bg-blue-600 transition-colors flex items-center"
+        onClick={() => handleActionModalOpen(member)}
+        title="View actions"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+        </svg>
+        Actions
+      </button>
+    );
+  };
+
+  // Function to render member avatar
+  const renderAvatar = (member) => (
+    <div className="h-10 w-10 flex-shrink-0">
+      {member.photoUrl ? (
+        <img
+          className="h-10 w-10 rounded-full object-cover"
+          src={`${IMAGE_URL}${member.photoUrl}`}
+          alt={member.name}
+        />
+      ) : (
+        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-medium">
+          {member.name.charAt(0)}
+        </div>
+      )}
+    </div>
+  );
+
+  // Export functions
+  function arrayToCSV(data, fields) {
+    const csvRows = [];
+    csvRows.push(fields.join(','));
+    for (const row of data) {
+      const values = fields.map(field => {
+        let value = row[field];
+        if (Array.isArray(value)) value = value.join('; ');
+        if (value === undefined || value === null) value = '';
+        value = String(value).replace(/"/g, '""');
+        return `"${value}"`;
       });
-    } else if (sortBy === 'createdAt') {
-      usersWithMembership.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-        if (sortOrder === 'asc') {
-          return dateA - dateB;
-        } else {
-          return dateB - dateA;
-        }
+      csvRows.push(values.join(','));
+    }
+    return csvRows.join('\n');
+  }
+
+  function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  const handleExport = () => {
+    if (exportOptions.format === 'csv') {
+      const csv = arrayToCSV(members, exportOptions.fields);
+      downloadCSV(csv, 'members_export.csv');
+    } else if (exportOptions.format === 'pdf') {
+      const doc = new jsPDF();
+      const tableData = members.map(row =>
+        exportOptions.fields.map(field => Array.isArray(row[field]) ? row[field].join('; ') : row[field] ?? '')
+      );
+      autoTable(doc, {
+        head: [exportOptions.fields],
+        body: tableData,
       });
+      doc.save('members_export.pdf');
     } else {
-      users.sort((a, b) => {
-        const aValue = a[sortBy] || '';
-        const bValue = b[sortBy] || '';
-        if (sortOrder === 'asc') {
-          return aValue.localeCompare(bValue);
-        } else {
-          return bValue.localeCompare(aValue);
-        }
+      alert('Only CSV and PDF export are supported in the browser.');
+    }
+    setExportDialogOpen(false);
+  };
+
+  const handleTrainerModalOpen = (member) => {
+    setSelectedMember(member);
+    setTrainerModalOpen(true);
+  };
+
+  const handleTrainerModalClose = () => {
+    setTrainerModalOpen(false);
+    setSelectedMember(null);
+  };
+
+  const handleTrainerModalSubmit = async (trainerId) => {
+    setTrainerModalLoading(true);
+    try {
+      await reassignOrRemoveTrainer(selectedMember.id, trainerId);
+      enqueueSnackbar(trainerId ? 'Trainer reassigned successfully!' : 'Trainer removed successfully!', { variant: 'success' });
+      handleTrainerModalClose();
+      refetch();
+    } catch (err) {
+      enqueueSnackbar(err.message || 'Failed to update trainer', { variant: 'error' });
+    } finally {
+      setTrainerModalLoading(false);
+    }
+  };
+
+  const handleUpgradeClick = (member) => {
+    setUpgradeMember(member);
+    setSelectedPackageId('');
+    setUpgradeDialogOpen(true);
+  };
+
+  const handleUpgradeDialogClose = () => {
+    setUpgradeDialogOpen(false);
+    setUpgradeMember(null);
+    setSelectedPackageId('');
+  };
+
+  const handleUpgradeConfirm = async () => {
+    if (!selectedPackageId) return;
+    setUpgradeLoading(true);
+    try {
+      const { headers } = await import('../../../config/config').then(m => m.GET_HEADER({ isJson: true }));
+      const response = await fetch(`${API_URL}/memberships/upgrade`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ memberId: upgradeMember.id, newPackageId: selectedPackageId })
       });
-      const sortedUserIds = users.map(user => user.id);
-      const userMap = {};
-      usersWithMembership.forEach(user => {
-        userMap[user.id] = user;
-      });
-      usersWithMembership = sortedUserIds.map(id => userMap[id]).filter(Boolean);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to upgrade package');
+      enqueueSnackbar('Package upgraded successfully!', { variant: 'success' });
+      handleUpgradeDialogClose();
+      refetch();
+    } catch (err) {
+      enqueueSnackbar(err.message || 'Failed to upgrade package', { variant: 'error' });
+    } finally {
+      setUpgradeLoading(false);
     }
+  };
 
-    // Get total count for pagination (without limit/offset)
-    const totalUsers = await User.count({ where: userWhereClause });
-    const totalPages = Math.ceil(totalUsers / limit);
+  // Action modal functions
+  const handleActionModalOpen = (member) => {
+    setSelectedMemberForAction(member);
+    setActionModalOpen(true);
+  };
 
-    res.status(200).json({
-      success: true,
-      count: usersWithMembership.length,
-      totalCount: totalUsers,
-      currentPage: parseInt(page),
-      totalPages,
-      data: usersWithMembership,
-      filters: {
-        search,
-        packageId,
-        expirationStatus,
-        sortBy,
-        sortOrder
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching users with membership:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+  const handleActionModalClose = () => {
+    setActionModalOpen(false);
+    setSelectedMemberForAction(null);
+  };
+
+  const handleActionClick = (action) => {
+    if (!selectedMemberForAction) return;
+    
+    switch (action) {
+      case 'buy':
+        handleBuyClick(selectedMemberForAction);
+        break;
+      case 'freeze':
+        handleFreezeClick(selectedMemberForAction, false);
+        break;
+      case 'unfreeze':
+        handleFreezeClick(selectedMemberForAction, true);
+        break;
+      case 'trainer':
+        handleTrainerModalOpen(selectedMemberForAction);
+        break;
+      case 'qr':
+        handleQrCodeClick(selectedMemberForAction);
+        break;
+      case 'upgrade':
+        handleUpgradeClick(selectedMemberForAction);
+        break;
+      default:
+        break;
+    }
+    
+    handleActionModalClose();
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
-};
 
-// exports.getAllUsers = async (req, res) => {
-//   try {
-//     // Extract query parameters
-//     const {
-//       search = '',
-//       packageId = '',
-//       expirationStatus = '',
-//       sortBy = 'fullName',
-//       sortOrder = 'asc',
-//       page = 1,
-//       limit = 10
-//     } = req.query;
-
-//     const offset = (page - 1) * limit;
-//     const replacements = {
-//       search: `%${search}%`,
-//       limit: parseInt(limit),
-//       offset: parseInt(offset)
-//     };
-
-//     // If sorting by membership/package name, use raw SQL for scalable sorting
-//     if (sortBy === 'membership') {
-//       // Build WHERE clause for search
-//       let whereClause = '';
-//       if (search) {
-//         whereClause = `WHERE u.fullName LIKE :search OR u.email LIKE :search`;
-//       }
-
-//       // Add packageId filter
-//       let havingClause = '';
-//       if (packageId) {
-//         havingClause = `HAVING membershipProductId = :packageId`;
-//         replacements.packageId = packageId;
-//       }
-
-//       // Add expirationStatus filter
-//       let statusHaving = '';
-//       if (expirationStatus) {
-//         if (havingClause) statusHaving += ' AND ';
-//         else statusHaving += 'HAVING ';
-//         if (expirationStatus === 'active') {
-//           statusHaving += 'membershipStatus = "active" AND (isFrozen IS NULL OR isFrozen = 0)';
-//         } else if (expirationStatus === 'frozen') {
-//           statusHaving += 'membershipStatus = "active" AND isFrozen = 1';
-//         } else if (expirationStatus === 'inactive') {
-//           statusHaving += 'membershipStatus = "inactive"';
-//         }
-//       }
-
-//       // Compose the SQL
-//       const sql = `
-//         SELECT 
-//           u.*, 
-//           p.planTitle AS membership, 
-//           IF(p.id IS NOT NULL, 'active', 'inactive') AS membershipStatus,
-//           p.expiryDate AS membershipExpiry,
-//           p.qrCodeData AS qrcodeData,
-//           p.id AS paymentId,
-//           p.isFrozen AS isFrozen,
-//           p.freezeStartDate AS freezeStartDate,
-//           p.freezeEndDate AS freezeEndDate,
-//           p.originalExpiryDate AS originalExpiryDate,
-//           p.productId AS membershipProductId,
-//           p.totalPasses AS totalPasses,
-//           t.id AS trainerId,
-//           t.name AS trainerName,
-//           t.email AS trainerEmail,
-//           t.phone AS trainerPhone
-//         FROM Users u
-//         LEFT JOIN (
-//           SELECT p1.* FROM Payments p1
-//           INNER JOIN (
-//             SELECT userId, MAX(expiryDate) AS maxExpiry
-//             FROM Payments
-//             WHERE paymentstatus = 'completed' AND expiryDate > NOW()
-//             GROUP BY userId
-//           ) p2 ON p1.userId = p2.userId AND p1.expiryDate = p2.maxExpiry
-//         ) p ON p.userId = u.id
-//         LEFT JOIN Trainers t ON u.trainerId = t.id
-//         ${whereClause}
-//         ${havingClause}
-//         ${statusHaving}
-//         ORDER BY membership ${sortOrder.toUpperCase()}, u.fullName ASC
-//         LIMIT :limit OFFSET :offset
-//       `;
-
-//       const users = await sequelize.query(sql, {
-//         replacements,
-//         type: sequelize.QueryTypes.SELECT
-//       });
-
-//       // Get total count for pagination
-//       const countSql = `
-//         SELECT COUNT(DISTINCT u.id) as total
-//         FROM Users u
-//         LEFT JOIN (
-//           SELECT p1.* FROM Payments p1
-//           INNER JOIN (
-//             SELECT userId, MAX(expiryDate) AS maxExpiry
-//             FROM Payments
-//             WHERE paymentstatus = 'completed' AND expiryDate > NOW()
-//             GROUP BY userId
-//           ) p2 ON p1.userId = p2.userId AND p1.expiryDate = p2.maxExpiry
-//         ) p ON p.userId = u.id
-//         ${whereClause}
-//         ${havingClause}
-//         ${statusHaving}
-//       `;
-//       const countResult = await sequelize.query(countSql, {
-//         replacements,
-//         type: sequelize.QueryTypes.SELECT
-//       });
-//       const totalUsers = countResult[0].total;
-//       const totalPages = Math.ceil(totalUsers / limit);
-
-//       res.status(200).json({
-//         success: true,
-//         count: users.length,
-//         totalCount: totalUsers,
-//         currentPage: parseInt(page),
-//         totalPages,
-//         data: users,
-//         filters: {
-//           search,
-//           packageId,
-//           expirationStatus,
-//           sortBy,
-//           sortOrder
-//         }
-//       });
-//       return;
-//     }
-
-//     // --- Default: Use existing logic for other sort fields ---
-//     // Build where clause for User model
-//     const userWhereClause = {};
-//     if (search) {
-//       userWhereClause[Op.or] = [
-//         { fullName: { [Op.like]: `%${search}%` } },
-//         { email: { [Op.like]: `%${search}%` } }
-//       ];
-//     }
-
-//     // Get users with trainer information
-//     const users = await User.findAll({
-//       where: userWhereClause,
-//       attributes: { 
-//         include: ['trainerId'], 
-//         exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
-//       },
-//       include: [
-//         {
-//           model: Trainer,
-//           as: 'trainer',
-//           attributes: ['id', 'name', 'email', 'phone'],
-//           required: false
-//         }
-//       ],
-//       limit: parseInt(limit),
-//       order: [[sortBy, sortOrder.toUpperCase()]],
-//       offset: parseInt(offset)
-//     });
-
-//     // Get all active payments for filtering
-//     const activePayments = await Payment.findAll({
-//       where: {
-//         paymentstatus: 'completed',
-//         expiryDate: {
-//           [Op.gt]: new Date()
-//         }
-//       },
-//       attributes: [
-//         'userId',
-//         'planTitle',
-//         'expiryDate',
-//         'qrCodeData',
-//         'id',
-//         'isFrozen',
-//         'freezeStartDate',
-//         'freezeEndDate',
-//         'originalExpiryDate',
-//         'productId',
-//         'totalPasses'
-//       ]
-//     });
-
-//     const userPaymentMap = {};
-//     activePayments.forEach(payment => {
-//       const paymentData = payment.get({ plain: true });
-//       if (!userPaymentMap[paymentData.userId] ||
-//           new Date(paymentData.expiryDate) > new Date(userPaymentMap[paymentData.userId].expiryDate)) {
-//         userPaymentMap[paymentData.userId] = paymentData;
-//       }
-//     });
-
-//     // Process users and apply membership data
-//     let usersWithMembership = users.map(user => {
-//       const userData = user.get({ plain: true });
-//       const userPayment = userPaymentMap[userData.id];
-
-//       if (userPayment) {
-//         userData.membership = userPayment.planTitle;
-//         userData.membershipStatus = 'active';
-//         userData.membershipExpiry = userPayment.expiryDate;
-//         userData.qrcodeData = userPayment.qrCodeData;
-//         userData.paymentId = userPayment.id;
-//         userData.isFrozen = userPayment.isFrozen || false;
-//         userData.freezeStartDate = userPayment.freezeStartDate;
-//         userData.freezeEndDate = userPayment.freezeEndDate;
-//         userData.originalExpiryDate = userPayment.originalExpiryDate;
-//         userData.totalPasses = userPayment.totalPasses || 0;
-//       } else {
-//         userData.membership = 'None';
-//         userData.membershipStatus = 'inactive';
-//         userData.isFrozen = false;
-//         userData.totalPasses = 0;
-//       }
-
-//       return userData;
-//     });
-
-//     // Apply package type filter
-//     if (packageId) {
-//       // Filter by package ID from payments
-//       const filteredPayments = activePayments.filter(payment => 
-//         payment.productId === packageId
-//       );
-//       const filteredUserIds = filteredPayments.map(payment => payment.userId);
-//       usersWithMembership = usersWithMembership.filter(user => 
-//         filteredUserIds.includes(user.id)
-//       );
-//     }
-
-//     // Apply expiration status filter
-//     if (expirationStatus) {
-//       switch (expirationStatus) {
-//         case 'active':
-//           usersWithMembership = usersWithMembership.filter(user => 
-//             user.membershipStatus === 'active' && !user.isFrozen
-//           );
-//           break;
-//         case 'frozen':
-//           usersWithMembership = usersWithMembership.filter(user => 
-//             user.membershipStatus === 'active' && user.isFrozen
-//           );
-//           break;
-//         case 'inactive':
-//           usersWithMembership = usersWithMembership.filter(user => 
-//             user.membershipStatus === 'inactive'
-//           );
-//           break;
-//       }
-//     }
-
-//     // Apply sorting after processing membership data
-//     if (sortBy === 'membershipExpiry') {
-//       usersWithMembership.sort((a, b) => {
-//         const dateA = a.membershipExpiry ? new Date(a.membershipExpiry) : new Date('9999-12-31');
-//         const dateB = b.membershipExpiry ? new Date(b.membershipExpiry) : new Date('9999-12-31');
-//         if (sortOrder === 'asc') {
-//           return dateA - dateB;
-//         } else {
-//           return dateB - dateA;
-//         }
-//       });
-//     } else {
-//       // For other sort fields, sort the original users array
-//       users.sort((a, b) => {
-//         const aValue = a[sortBy] || '';
-//         const bValue = b[sortBy] || '';
-//         if (sortOrder === 'asc') {
-//           return aValue.localeCompare(bValue);
-//         } else {
-//           return bValue.localeCompare(aValue);
-//         }
-//       });
-//       // Re-map the sorted users to include membership data
-//       const sortedUserIds = users.map(user => user.id);
-//       const userMap = {};
-//       usersWithMembership.forEach(user => {
-//         userMap[user.id] = user;
-//       });
-//       usersWithMembership = sortedUserIds.map(id => userMap[id]).filter(Boolean);
-//     }
-
-//     // Get total count for pagination (without limit/offset)
-//     const totalUsers = await User.count({ where: userWhereClause });
-//     const totalPages = Math.ceil(totalUsers / limit);
-
-//     res.status(200).json({
-//       success: true,
-//       count: usersWithMembership.length,
-//       totalCount: totalUsers,
-//       currentPage: parseInt(page),
-//       totalPages,
-//       data: usersWithMembership,
-//       filters: {
-//         search,
-//         packageId,
-//         expirationStatus,
-//         sortBy,
-//         sortOrder
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error fetching users with membership:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Server Error',
-//       error: error.message
-//     });
-//   }
-// };
-
-
-exports.getUserById = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.params.id, {
-      attributes: { exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>Error loading members: {error}</p>
+        </div>
+      </div>
+    );
   }
-};
 
-exports.updateUser = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.params.id);
+  return (
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-2 sm:px-0">
+        <h2 className="text-xl font-bold mb-2 sm:mb-0">Members</h2>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="text-sm text-gray-500">
+            Showing {members.length} of {totalMembers} members
+          </div>
+          <Link
+            to="/admin/add-member"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <UserPlus size={16} className="mr-2" />
+            Add Member
+          </Link>
+          <Button
+            variant="contained"
+            onClick={() => setExportDialogOpen(true)}
+            sx={{ ml: 2 }}
+          >
+            Export
+          </Button>
+        </div>
+      </div>
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+      {/* Search and Filter Section */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            {/* Search */}
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Search by Name or Email"
+                variant="outlined"
+                size="small"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search size={20} style={{ marginRight: 8, color: '#666' }} />
+                }}
+              />
+            </Grid>
 
-    // Handle password update with current password verification
-    if (req.body.newPassword) {
-      // Check if current password is provided
-      if (!req.body.currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is required to update password'
-        });
-      }
+            {/* Filter Toggle */}
+            <Grid item xs={12} md={8}>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outlined"
+                  startIcon={<Filter />}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  Filters
+                </Button>
+                {(filters.packageId || filters.expirationStatus) && (
+                  <Button
+                    variant="text"
+                    onClick={clearFilters}
+                    size="small"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </Grid>
 
-      // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(req.body.currentPassword, user.password);
-      if (!isCurrentPasswordValid) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is incorrect'
-        });
-      }
+            {/* Filter Options */}
+            {showFilters && (
+              <Grid item xs={12}>
+                <Grid container spacing={2}>
+                  {/* Package Type Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl sx={{ minWidth: 120 }} fullWidth size="small">
+                      <InputLabel>Package Type</InputLabel>
+                      <Select
+                        value={filters.packageId}
+                        onChange={(e) => handleFilterChange('packageId', e.target.value)}
+                        label="Package Type"
+                      >
+                        <MenuItem value="">All Packages</MenuItem>
+                        {filterOptions.packages && filterOptions.packages.map((pkg) => (
+                          <MenuItem key={pkg.id} value={pkg.id}>{pkg.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-      // Hash new password
-      const salt = await bcrypt.genSalt(10);
-      req.body.password = await bcrypt.hash(req.body.newPassword, salt);
-      
-      // Remove the newPassword and currentPassword from req.body
-      delete req.body.newPassword;
-      delete req.body.currentPassword;
-    }
+                  {/* Expiration Status Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth sx={{ minWidth: 120 }} size="small">
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        value={filters.expirationStatus}
+                        onChange={(e) => handleFilterChange('expirationStatus', e.target.value)}
+                        label="Status"
+                      >
+                        <MenuItem value="">All Status</MenuItem>
+                        {filterOptions.expirationStatuses && filterOptions.expirationStatuses.map((status) => (
+                          <MenuItem key={status.value} value={status.value}>
+                            {status.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-    // Handle profile photo upload
-    if (req.file) {
-      if (user.photoUrl) {
-        const oldPhotoPath = path.join(__dirname, '..', user.photoUrl.replace(/^\//, ''));
-        if (fs.existsSync(oldPhotoPath)) {
-          fs.unlinkSync(oldPhotoPath);
-        }
-      }
-      req.body.photoUrl = `/${req.file.path.replace(/\\/g, '/')}`;
-    }
+                  {/* Sort Options */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Sort By</InputLabel>
+                      <Select
+                        value={filters.sortBy}
+                        onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                        label="Sort By"
+                      >
+                        {filterOptions.sortOptions && filterOptions.sortOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-    // Update user with all fields including emergency contact fields
-    await user.update(req.body);
+                  {/* Sort Order */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl sx={{ minWidth: 120 }} fullWidth size="small">
+                      <InputLabel>Order</InputLabel>
+                      <Select
+                        value={filters.sortOrder}
+                        onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
+                        label="Order"
+                      >
+                        <MenuItem value="asc">Ascending</MenuItem>
+                        <MenuItem value="desc">Descending</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
 
-    res.status(200).json({
-      success: true,
-      message: 'Profile updated successfully',
-      data: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        emergencyContactName: user.emergencyContactName,
-        emergencyContactPhone: user.emergencyContactPhone,
-        emergencyContactRelationship: user.emergencyContactRelationship,
-        dateOfBirth: user.dateOfBirth,
-        address: user.address,
-        fitnessGoals: user.fitnessGoals,
-        medicalConditions: user.medicalConditions,
-        role: user.role,
-        photoUrl: user.photoUrl
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
+      {/* Mobile View - Card Layout */}
+      {isMobile && (
+        <div className="space-y-4 px-2 sm:px-0">
+          {members.map((member) => (
+            <div key={member.id} className="bg-white rounded-lg shadow p-4 overflow-hidden">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  {renderAvatar(member)}
+                  <div className="ml-3">
+                    <div className="font-medium text-gray-900">
+                      {member.name}
+                    </div>
+                    <div className="text-gray-500 text-sm">{member.email}</div>
+                  </div>
+                </div>
+                <div>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</div>
+              </div>
 
-exports.deleteUser = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.params.id);
+              <div className="border-t border-gray-200 pt-3 space-y-2">
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <Phone size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Phone</div>
+                    <div className="text-sm">{member.phone}</div>
+                  </div>
+                </div>
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <AlertCircle size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      Emergency Contact
+                    </div>
+                    <div className="text-sm">{member.emergencyContact}</div>
+                  </div>
+                </div>
 
-    await user.destroy();
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <MapPin size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Address</div>
+                    <div className="text-sm">{member.address}</div>
+                  </div>
+                </div>
 
-    res.status(200).json({
-      success: true,
-      message: 'User deleted successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <Calendar size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Birth Year</div>
+                    <div className="text-sm">{member.birthYear}</div>
+                  </div>
+                </div>
 
-exports.getFilterOptions = async (req, res) => {
-  try {
-    // Get all active packages
-    const packages = await Package.findAll({
-      where: { isActive: true },
-      attributes: ['id', 'name', 'price'],
-      order: [['name', 'ASC']]
-    });
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Trainer</div>
+                    <div className="text-sm">{member.trainerName}</div>
+                  </div>
+                </div>
 
-    // Get all active trainers
-    const trainers = await Trainer.findAll({
-      where: { isActive: true },
-      attributes: ['id', 'name', 'email'],
-      order: [['name', 'ASC']]
-    });
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Passes</div>
+                    <div className="text-sm">{member.totalPasses || 0}</div>
+                  </div>
+                </div>
 
-    // Get unique package types from active payments
-    const activePayments = await Payment.findAll({
-      where: {
-        paymentstatus: 'completed',
-        expiryDate: {
-          [Op.gt]: new Date()
-        }
-      },
-      attributes: ['planTitle'],
-      group: ['planTitle']
-    });
+                <div className="flex items-start">
+                  <div className="text-gray-500 mr-2">
+                    <Calendar size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Action</div>
+                    <div className="flex flex-col gap-2">
+                      {renderActionButtons(member)}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-    const packageTypes = activePayments.map(payment => payment.planTitle).filter(Boolean);
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm font-medium text-gray-700">
+                    {member.membership}
+                  </div>
+                  {member.membershipExpiry && (
+                    <div className="text-xs text-gray-500">
+                      Expires: {new Date(member.membershipExpiry).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-    res.status(200).json({
-      success: true,
-      data: {
-        packages: packages.map(pkg => ({
-          id: pkg.id,
-          name: pkg.name,
-          price: pkg.price
-        })),
-        trainers: trainers.map(trainer => ({
-          id: trainer.id,
-          name: trainer.name,
-          email: trainer.email
-        })),
-        packageTypes: [...new Set(packageTypes)].map(type => ({
-          value: type,
-          label: type
-        })),
-        expirationStatuses: [
-          { value: 'active', label: 'Active' },
-          { value: 'frozen', label: 'Frozen' },
-          { value: 'inactive', label: 'Inactive' }
-        ],
-        sortOptions: [
-          { value: 'fullName', label: 'Name (A-Z)' },
-          { value: 'createdAt', label: 'Recently Registered' },
-          { value: 'membershipExpiry', label: 'Expiry Date' }
-        ]
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching filter options:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
-  }
-};
+      {/* Desktop View - Table Layout */}
+      {!isMobile && (
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'fullName'}
+                    direction={filters.sortBy === 'fullName' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('fullName', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Member
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membership'}
+                    direction={filters.sortBy === 'membership' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membership', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Membership Type
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membershipStatus'}
+                    direction={filters.sortBy === 'membershipStatus' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membershipStatus', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Membership Status
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Emergency Contact</TableCell>
+                <TableCell>Address</TableCell>
+                <TableCell>Birth Year</TableCell>
+                <TableCell>Trainer</TableCell>
+                <TableCell>Passes</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={filters.sortBy === 'membershipExpiry'}
+                    direction={filters.sortBy === 'membershipExpiry' ? filters.sortOrder : 'asc'}
+                    onClick={() => handleSort('membershipExpiry', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Expiry Date
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.id} hover>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {renderAvatar(member)}
+                      <div className="ml-4">
+                        <div className="font-medium text-gray-900">
+                          {member.name}
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          {member.email}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{member.membership}</TableCell>
+                  <TableCell>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</TableCell>
+                  <TableCell>{member.phone}</TableCell>
+                  <TableCell>{member.emergencyContact}</TableCell>
+                  <TableCell>{member.address}</TableCell>
+                  <TableCell>{member.birthYear}</TableCell>
+                  <TableCell>{member.trainerName}</TableCell>
+                  <TableCell>{member.totalPasses}</TableCell>
+                  <TableCell>
+                    {member.membershipExpiry ? new Date(member.membershipExpiry).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell>{renderActionButtons(member)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Pagination controls */}
+      {totalPages > 1 && renderPagination()}
+
+      {/* Package Modal */}
+      <PackageModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        member={selectedMember}
+      />
+
+      {/* Freeze Modal */}
+      <FreezeModal
+        isOpen={isFreezeModalOpen}
+        onClose={closeFreezeModal}
+        member={selectedMember}
+        isFrozen={isFrozen}
+      />
+
+      {/* QR Code Modal */}
+      {showQrCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="relative w-full max-w-md rounded-xl bg-white shadow-2xl p-6">
+            <button
+              onClick={closeQrCodeModal}
+              className="absolute right-4 top-4 rounded-full bg-gray-100 p-2 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Membership QR Code</h2>
+              <p className="text-gray-600 mt-1">
+                {selectedMember?.name}'s membership QR code
+              </p>
+              {selectedMember?.membershipExpiry && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Expires: {new Date(selectedMember.membershipExpiry).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            <div
+              ref={qrCodeRef}
+              className="flex justify-center items-center bg-white p-4 rounded-lg shadow-inner mb-6"
+            >
+              {loadingQrCode ? (
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              ) : (
+                (() => {
+                  let parsed = {};
+                  if (typeof qrCodeData === "string") {
+                    try {
+                      parsed = JSON.parse(qrCodeData);
+                    } catch {
+                      parsed = {};
+                    }
+                  } else if (typeof qrCodeData === "object" && qrCodeData !== null) {
+                    parsed = qrCodeData;
+                  }
+                  return (
+                    <QRCodeSVG
+                      value={JSON.stringify({
+                        paymentId: parsed.paymentId
+                      })}
+                      size={200}
+                      level="H"
+                      margin={10}
+                      imageSettings={{
+                        src: "/logo.png",
+                        x: undefined,
+                        y: undefined,
+                        height: 40,
+                        width: 40,
+                        excavate: true,
+                      }}
+                    />
+                  );
+                })()
+              )}
+            </div>
+
+            <div className="text-center mb-4">
+              <p className="text-sm text-gray-500">
+                Scan this QR code to verify membership
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                onClick={downloadQRCode}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Download QR Code
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
+        <DialogTitle>Export Members</DialogTitle>
+        <DialogContent>
+          <TextField
+            select
+            label="Format"
+            value={exportOptions.format}
+            onChange={(e) => setExportOptions({...exportOptions, format: e.target.value})}
+            fullWidth
+            margin="normal"
+          >
+            <MenuItem value="csv">CSV</MenuItem>
+            <MenuItem value="pdf">PDF</MenuItem>
+          </TextField>
+          <div style={{ marginTop: 16 }}>
+            <h4>Select Fields to Export</h4>
+            {['name', 'email', 'membership', 'membershipStatus', 'phone', 'emergencyContact', 'address', 'birthYear'].map((field) => (
+              <FormControlLabel
+                key={field}
+                control={
+                  <Checkbox
+                    checked={exportOptions.fields.includes(field)}
+                    onChange={(e) => {
+                      const newFields = e.target.checked
+                        ? [...exportOptions.fields, field]
+                        : exportOptions.fields.filter(f => f !== field);
+                      setExportOptions({...exportOptions, fields: newFields});
+                    }}
+                  />
+                }
+                label={field.charAt(0).toUpperCase() + field.slice(1)}
+              />
+            ))}
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleExport} variant="contained">Export</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Trainer Reassign Modal */}
+      <TrainerReassignModal
+        open={trainerModalOpen}
+        onClose={handleTrainerModalClose}
+        member={selectedMember}
+        trainers={trainers}
+        onSubmit={handleTrainerModalSubmit}
+        loading={trainerModalLoading}
+      />
+
+      {/* Upgrade Package Dialog */}
+      <Dialog open={upgradeDialogOpen} onClose={handleUpgradeDialogClose}>
+        <DialogTitle>Upgrade Member Package</DialogTitle>
+        <DialogContent>
+          <div style={{ minWidth: 300, marginTop: 8 }}>
+            <TextField
+              select
+              label="Select New Package"
+              value={selectedPackageId}
+              onChange={e => setSelectedPackageId(e.target.value)}
+              fullWidth
+              margin="normal"
+            >
+              {packages
+                .filter(pkg => pkg.isActive !== false)
+                .map(pkg => (
+                  <MenuItem key={pkg.id} value={pkg.id}>{pkg.name}</MenuItem>
+                ))}
+            </TextField>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleUpgradeDialogClose} disabled={upgradeLoading}>Cancel</Button>
+          <Button onClick={handleUpgradeConfirm} variant="contained" color="primary" disabled={!selectedPackageId || upgradeLoading}>
+            {upgradeLoading ? <CircularProgress size={20} /> : 'Upgrade'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Action Modal */}
+      <Dialog open={actionModalOpen} onClose={handleActionModalClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Actions for {selectedMemberForAction?.name}
+        </DialogTitle>
+        <DialogContent>
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* Buy Membership */}
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() !== 'active' && (
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                onClick={() => handleActionClick('buy')}
+                startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                </svg>}
+              >
+                Buy Membership
+              </Button>
+            )}
+
+            {/* Freeze/Unfreeze */}
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active' && !selectedMemberForAction?.isFrozen && (
+              <Button
+                variant="contained"
+                color="info"
+                fullWidth
+                onClick={() => handleActionClick('freeze')}
+                startIcon={<Snowflake size={20} />}
+              >
+                Freeze Membership
+              </Button>
+            )}
+
+            {selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active' && selectedMemberForAction?.isFrozen && (
+              <Button
+                variant="contained"
+                color="warning"
+                fullWidth
+                onClick={() => handleActionClick('unfreeze')}
+                startIcon={<Snowflake size={20} />}
+              >
+                Unfreeze Membership
+              </Button>
+            )}
+
+            {/* Trainer Management */}
+            {/* {(() => {
+              // Find the member's package to check if it requires a trainer
+              const memberPackage = packages.find(pkg => pkg.name === selectedMemberForAction?.membership);
+              const requiresTrainer = memberPackage?.requiresTrainer;
+              
+              return requiresTrainer && ( */}
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  fullWidth
+                  onClick={() => handleActionClick('trainer')}
+                  startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
+                  </svg>}
+                >
+                  Manage Trainer
+                </Button>
+              {/* );
+            })()} */}
+
+            {/* QR Code */}
+            {(selectedMemberForAction?.qrcodeData || selectedMemberForAction?.membershipStatus?.toLowerCase() === 'active') && (
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={() => handleActionClick('qr')}
+                startIcon={<QrCode size={20} />}
+              >
+                View QR Code
+              </Button>
+            )}
+
+            {/* Upgrade Package */}
+            <Button
+              variant="contained"
+              color="warning"
+              fullWidth
+              onClick={() => handleActionClick('upgrade')}
+              startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>}
+            >
+              Upgrade Package
+            </Button>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleActionModalClose} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </div>
+  );
+} 
