@@ -22,16 +22,16 @@ module.exports = {
       defaultValue: 'Family'
     });
 
-    await queryInterface.addColumn('Users', 'trainerId', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'Trainers',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    });
+    // await queryInterface.addColumn('Users', 'trainerId', {
+    //   type: Sequelize.UUID,
+    //   allowNull: true,
+    //   references: {
+    //     model: 'Trainers',
+    //     key: 'id'
+    //   },
+    //   onUpdate: 'CASCADE',
+    //   onDelete: 'SET NULL'
+    // });
 
     // Rename emergencyContact to emergencyContactPhone for existing data
     await queryInterface.sequelize.query(`
