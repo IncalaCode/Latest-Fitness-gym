@@ -1,7 +1,6 @@
 const db = require('../config/InitDatabase');
 const { Payment, Package } = require('../models');
 const { Op } = require('sequelize');
-const cosineSimilarity = require('string-cosine-similarity');
 
 function daysBetween(date1, date2) {
   const d1 = new Date(date1);
