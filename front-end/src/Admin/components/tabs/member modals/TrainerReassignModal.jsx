@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 
 export default function TrainerReassignModal({ open, onClose, member, trainers = [], onSubmit, loading }) {
   const [selectedTrainer, setSelectedTrainer] = useState(member?.trainerId || '');
+  const [description, setDescription] = useState(member?.trainerDescription || '');
   useEffect(() => {
     setSelectedTrainer(member?.trainerId || '');
+    setDescription(member?.trainerDescription || '');
   }, [member]);
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
     setError('');
-    onSubmit(selectedTrainer || null);
+    onSubmit({ selectedTrainer, description});
   };
 
   if (!open) return null;
@@ -51,6 +53,17 @@ export default function TrainerReassignModal({ open, onClose, member, trainers =
             ))}
           </select>
           {error && <div className="text-red-500 text-sm mt-1">{error}</div>}
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Trainer Description</div>
+          <textarea
+            className="w-full border rounded-lg p-2"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            placeholder="Enter a description for this trainer assignment (optional)"
+            disabled={loading}
+          />
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <button

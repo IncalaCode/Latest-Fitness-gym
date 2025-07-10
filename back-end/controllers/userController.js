@@ -190,7 +190,7 @@ exports.getAllUsers = async (req, res) => {
       users = await User.findAll({
         where: userWhereClause,
         attributes: {
-          include: ['trainerId'],
+          include: ['trainerId',"trainerDescription"],
           exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires']
         },
         include: [
@@ -207,7 +207,7 @@ exports.getAllUsers = async (req, res) => {
       users = await User.findAll({
       where: userWhereClause,
       attributes: { 
-        include: ['trainerId'], 
+        include: ['trainerId','trainerDescription'], 
         exclude: ['password', 'forgetPasswordToken', 'forgetPasswordExpires'] 
       },
       include: [

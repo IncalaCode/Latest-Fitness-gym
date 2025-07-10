@@ -1,9 +1,9 @@
 
-export const API_URL = 'https://latestfitnessethiopia.com/api';
-export const IMAGE_URL = 'https://latestfitnessethiopia.com';
+// export const API_URL = 'https://latestfitnessethiopia.com/api';
+// export const IMAGE_URL = 'https://latestfitnessethiopia.com';
 
-// export const API_URL = 'http://localhost:3001/api';
-// export const IMAGE_URL = 'http://localhost:3001';
+export const API_URL = 'http://localhost:3001/api';
+export const IMAGE_URL = 'http://localhost:3001';
 export const AUTH_ENDPOINTS = {
   LOGIN: `${API_URL}/auth/login`,
   REGISTER: `${API_URL}/users/register`,

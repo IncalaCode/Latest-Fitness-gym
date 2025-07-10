@@ -65,6 +65,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    trainerDescription: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     role: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -29,6 +29,7 @@ export default function TrainerClientsModal({ open, onClose, trainer, clients = 
                   <th className="px-3 py-2 border">Name</th>
                   <th className="px-3 py-2 border">Email</th>
                   <th className="px-3 py-2 border">Phone</th>
+                  <th className="px-3 py-2 border">Trainer Description</th>
                 </tr>
               </thead>
               <tbody>
@@ -37,6 +38,7 @@ export default function TrainerClientsModal({ open, onClose, trainer, clients = 
                     <td className="px-3 py-2 border">{client.fullName}</td>
                     <td className="px-3 py-2 border">{client.email}</td>
                     <td className="px-3 py-2 border">{client.phone}</td>
+                    <td className="px-3 py-2 border">{client.trainerDescription || <span className="italic text-gray-400">-</span>}</td>
                   </tr>
                 ))}
               </tbody>

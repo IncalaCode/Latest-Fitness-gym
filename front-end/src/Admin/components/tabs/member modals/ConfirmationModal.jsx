@@ -12,6 +12,8 @@ export default function ConfirmationModal({
   trainers = [],
   selectedTrainer,
   setSelectedTrainer,
+  trainerDescription,
+  setTrainerDescription,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -96,6 +98,18 @@ export default function ConfirmationModal({
               {error && <div className="text-red-500 text-sm mt-1">{error}</div>}
             </div>
           )}
+          {requiresTrainer && selectedTrainer && (
+            <div className="mb-4">
+              <label className="block font-semibold mb-1">Trainer Description</label>
+              <textarea
+                className="w-full border rounded-lg p-2"
+                value={trainerDescription}
+                onChange={e => setTrainerDescription(e.target.value)}
+                rows={3}
+                placeholder="Enter a description for this trainer assignment (optional)"
+              />
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -154,4 +168,6 @@ ConfirmationModal.propTypes = {
   trainers: PropTypes.array,
   selectedTrainer: PropTypes.string,
   setSelectedTrainer: PropTypes.func,
+  trainerDescription: PropTypes.string,
+  setTrainerDescription: PropTypes.func,
 };

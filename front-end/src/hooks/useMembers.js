@@ -74,7 +74,8 @@ const useMembers = (rowsPerPage = 10) => {
             trainerId: user.trainerId,
             trainer: user.trainer,
             trainerName: user.trainer ? user.trainer.name : 'Unassigned',
-            totalPasses: user.totalPasses || 0
+            totalPasses: user.totalPasses || 0,
+            trainerDescription : user.trainerDescription || "add something"
           };
         });
 

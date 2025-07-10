@@ -191,7 +191,7 @@ exports.deleteTrainer = async (req, res) => {
 // Assign member to trainer
 exports.assignMemberToTrainer = async (req, res) => {
   try {
-    const { memberId, trainerId } = req.body;
+    const { memberId, trainerId, trainerDescription } = req.body;
 
     const member = await User.findByPk(memberId);
     if (!member) {
@@ -209,7 +209,7 @@ exports.assignMemberToTrainer = async (req, res) => {
       });
     }
 
-    await member.update({ trainerId });
+    await member.update({ trainerId, trainerDescription });
 
     res.status(200).json({
       success: true,
@@ -292,7 +292,7 @@ exports.getTrainerClients = async (req, res) => {
     // Find all users assigned to this trainer
     const users = await User.findAll({
       where: { trainerId: id, isActive: true },
-      attributes: ['id', 'fullName', 'email', 'phone']
+      attributes: ['id', 'fullName', 'email', 'phone',"trainerDescription"]
     });
     res.status(200).json({ success: true, data: users });
   } catch (error) {

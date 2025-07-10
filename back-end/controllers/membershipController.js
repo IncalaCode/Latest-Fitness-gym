@@ -217,7 +217,7 @@ exports.sendExpirationReminders = async (req, res) => {
 // Reassign or remove trainer for a member
 exports.reassignOrRemoveTrainer = async (req, res) => {
   try {
-    const { memberId, trainerId } = req.body;
+    const { memberId, trainerId, trainerDescription } = req.body;
     if (!memberId) {
       return res.status(400).json({
         success: false,
@@ -232,8 +232,9 @@ exports.reassignOrRemoveTrainer = async (req, res) => {
       });
     }
     if (trainerId) {
-      // Assign trainer
-      member.trainerId = trainerId;
+      member.trainerId = trainerId.selectedTrainer;
+      member.trainerDescription = trainerId.description;
+      
       await member.save();
       return res.status(200).json({
         success: true,

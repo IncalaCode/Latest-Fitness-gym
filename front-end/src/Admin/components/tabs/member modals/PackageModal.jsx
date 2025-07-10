@@ -23,6 +23,7 @@ export default function PackageModal({ isOpen, onClose, member }) {
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [requiresTrainer, setRequiresTrainer] = useState(false);
   const [packageId, setPackageId] = useState(null);
+  const [trainerDescription, setTrainerDescription] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -229,7 +230,8 @@ export default function PackageModal({ isOpen, onClose, member }) {
             headers: assignHeader.headers,
             body: JSON.stringify({
               memberId: member.id,
-              trainerId: selectedTrainer
+              trainerId: selectedTrainer,
+              trainerDescription
             })
           });
         } catch (err) {
@@ -416,6 +418,8 @@ export default function PackageModal({ isOpen, onClose, member }) {
           trainers={trainers}
           selectedTrainer={selectedTrainer}
           setSelectedTrainer={setSelectedTrainer}
+          trainerDescription={trainerDescription}
+          setTrainerDescription={setTrainerDescription}
         />
       )}
     </div>
