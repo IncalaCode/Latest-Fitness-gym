@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { API_URL, GET_HEADER } from '../config/config';
 
 const useMembers = (rowsPerPage = 10) => {
@@ -17,6 +17,8 @@ const useMembers = (rowsPerPage = 10) => {
     sortBy: 'fullName',
     sortOrder: 'asc'
   });
+
+  const debounceTimeout = useRef();
 
   const fetchAllMembers = async (newFilters = null) => {
     try {
@@ -103,7 +105,10 @@ const useMembers = (rowsPerPage = 10) => {
   };
 
   const handleSearch = (searchTerm) => {
-    updateFilters({ search: searchTerm });
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      updateFilters({ search: searchTerm });
+    }, 500);
   };
 
   const handleSort = (sortBy, sortOrder) => {

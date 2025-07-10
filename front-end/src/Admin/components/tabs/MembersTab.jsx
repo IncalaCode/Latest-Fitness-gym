@@ -42,8 +42,9 @@ import {
 } from '@mui/material';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+// Remove: import MembersTable from './MembersTable';
 
-export default function MembersTabUpdated({ rowsPerPage = 10 }) {
+function MembersTab({ rowsPerPage = 10 }) {
   const {
     members,
     loading,
@@ -73,12 +74,12 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
   const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const qrCodeRef = useRef(null);
+  const searchInputRef = useRef(null);
   const { enqueueSnackbar } = useSnackbar();
   const [selected, setSelected] = useState([]);
   const [bulkDeleteSnackbarOpen, setBulkDeleteSnackbarOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const bulkDeleteTimeoutRef = useRef(null);
-  const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({
@@ -110,14 +111,12 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
-  // Handle search input change with debouncing
+  // Auto-focus the search input after every render
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleSearch(search);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [search]);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchInputRef]);
 
   // Filter functions
   const handleFilterChange = (filterType, value) => {
@@ -143,7 +142,6 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedMember(null);
-    refetch();
   };
 
   // Function to handle QR code button click
@@ -201,7 +199,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
     setIsFrozen(false);
 
     if (success) {
-      refetch();
+      // refetch(); // This will be handled by MembersTable
     }
   };
 
@@ -439,7 +437,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
       await reassignOrRemoveTrainer(selectedMember.id, trainerId);
       enqueueSnackbar(trainerId ? 'Trainer reassigned successfully!' : 'Trainer removed successfully!', { variant: 'success' });
       handleTrainerModalClose();
-      refetch();
+      // refetch(); // This will be handled by MembersTable
     } catch (err) {
       enqueueSnackbar(err.message || 'Failed to update trainer', { variant: 'error' });
     } finally {
@@ -473,7 +471,7 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
       if (!response.ok) throw new Error(data.message || 'Failed to upgrade package');
       enqueueSnackbar('Package upgraded successfully!', { variant: 'success' });
       handleUpgradeDialogClose();
-      refetch();
+      // refetch(); // This will be handled by MembersTable
     } catch (err) {
       enqueueSnackbar(err.message || 'Failed to upgrade package', { variant: 'error' });
     } finally {
@@ -521,32 +519,11 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
     handleActionModalClose();
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Error loading members: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-2 sm:px-0">
         <h2 className="text-xl font-bold mb-2 sm:mb-0">Members</h2>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="text-sm text-gray-500">
-            Showing {members.length} of {totalMembers} members
-          </div>
           <Link
             to="/admin/add-member"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -571,12 +548,13 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
             {/* Search */}
             <Grid item xs={12} md={4}>
               <TextField
+                inputRef={searchInputRef}
                 fullWidth
                 label="Search by Name or Email"
                 variant="outlined"
                 size="small"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={filters.search}
+                onChange={e => handleSearch(e.target.value)}
                 InputProps={{
                   startAdornment: <Search size={20} style={{ marginRight: 8, color: '#666' }} />
                 }}
@@ -684,210 +662,70 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
         </CardContent>
       </Card>
 
-      {/* Mobile View - Card Layout */}
-      {isMobile && (
-        <div className="space-y-4 px-2 sm:px-0">
-          {members.map((member) => (
-            <div key={member.id} className="bg-white rounded-lg shadow p-4 overflow-hidden">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  {renderAvatar(member)}
-                  <div className="ml-3">
-                    <div className="font-medium text-gray-900">
-                      {member.name}
-                    </div>
-                    <div className="text-gray-500 text-sm">{member.email}</div>
-                  </div>
-                </div>
-                <div>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3 space-y-2">
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <Phone size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Phone</div>
-                    <div className="text-sm">{member.phone}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <AlertCircle size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">
-                      Emergency Contact
-                    </div>
-                    <div className="text-sm">{member.emergencyContact}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <MapPin size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Address</div>
-                    <div className="text-sm">{member.address}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <Calendar size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Birth Year</div>
-                    <div className="text-sm">{member.birthYear}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-8 0M12 14v7m-7-7a7 7 0 0114 0" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Trainer</div>
-                    <div className="text-sm">{member.trainerName}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Passes</div>
-                    <div className="text-sm">{member.totalPasses || 0}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 mr-2">
-                    <Calendar size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Action</div>
-                    <div className="flex flex-col gap-2">
-                      {renderActionButtons(member)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm font-medium text-gray-700">
-                    {member.membership}
-                  </div>
-                  {member.membershipExpiry && (
-                    <div className="text-xs text-gray-500">
-                      Expires: {new Date(member.membershipExpiry).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Desktop View - Table Layout */}
       {!isMobile && (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table stickyHeader>
+        <TableContainer component={Paper} sx={{ mb: 3 }}>
+          <Table>
             <TableHead>
               <TableRow>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === 'fullName'}
-                    direction={filters.sortBy === 'fullName' ? filters.sortOrder : 'asc'}
-                    onClick={() => handleSort('fullName', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                  >
-                    Member
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === 'membership'}
-                    direction={filters.sortBy === 'membership' ? filters.sortOrder : 'asc'}
-                    onClick={() => handleSort('membership', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                  >
-                    Membership Type
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === 'membershipStatus'}
-                    direction={filters.sortBy === 'membershipStatus' ? filters.sortOrder : 'asc'}
-                    onClick={() => handleSort('membershipStatus', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                  >
-                    Membership Status
-                  </TableSortLabel>
-                </TableCell>
+                <TableCell>Avatar</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Membership</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell>Phone</TableCell>
                 <TableCell>Emergency Contact</TableCell>
                 <TableCell>Address</TableCell>
                 <TableCell>Birth Year</TableCell>
                 <TableCell>Trainer</TableCell>
                 <TableCell>Passes</TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === 'membershipExpiry'}
-                    direction={filters.sortBy === 'membershipExpiry' ? filters.sortOrder : 'asc'}
-                    onClick={() => handleSort('membershipExpiry', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                  >
-                    Expiry Date
-                  </TableSortLabel>
-                </TableCell>
+                <TableCell>Expiry Date</TableCell>
                 <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id} hover>
-                  <TableCell>
-                    <div className="flex items-center">
-                      {renderAvatar(member)}
-                      <div className="ml-4">
-                        <div className="font-medium text-gray-900">
-                          {member.name}
-                        </div>
-                        <div className="text-gray-500 text-sm">
-                          {member.email}
-                        </div>
-                      </div>
-                    </div>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={13} align="center">
+                    <CircularProgress />
                   </TableCell>
-                  <TableCell>{member.membership}</TableCell>
-                  <TableCell>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>{member.emergencyContact}</TableCell>
-                  <TableCell>{member.address}</TableCell>
-                  <TableCell>{member.birthYear}</TableCell>
-                  <TableCell>{member.trainerName}</TableCell>
-                  <TableCell>{member.totalPasses}</TableCell>
-                  <TableCell>
-                    {member.membershipExpiry ? new Date(member.membershipExpiry).toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                  <TableCell>{renderActionButtons(member)}</TableCell>
                 </TableRow>
-              ))}
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={13} align="center" color="error">
+                    {error}
+                  </TableCell>
+                </TableRow>
+              ) : members.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={13} align="center">
+                    No members found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{renderAvatar(member)}</TableCell>
+                    <TableCell>{member.name}</TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell>{member.membership}</TableCell>
+                    <TableCell>{renderStatusBadge(member.membershipStatus, member.isFrozen)}</TableCell>
+                    <TableCell>{member.phone}</TableCell>
+                    <TableCell>{member.emergencyContact}</TableCell>
+                    <TableCell>{member.address}</TableCell>
+                    <TableCell>{member.birthYear}</TableCell>
+                    <TableCell>{member.trainerName}</TableCell>
+                    <TableCell>{member.totalPasses}</TableCell>
+                    <TableCell>{member.membershipExpiry ? new Date(member.membershipExpiry).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>{renderActionButtons(member)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
+          {renderPagination()}
         </TableContainer>
       )}
-
-      {/* Pagination controls */}
-      {totalPages > 1 && renderPagination()}
 
       {/* Package Modal */}
       <PackageModal
@@ -1193,4 +1031,6 @@ export default function MembersTabUpdated({ rowsPerPage = 10 }) {
       </Dialog>
     </div>
   );
-} 
+}
+
+export default MembersTab; 
