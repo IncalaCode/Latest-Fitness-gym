@@ -108,7 +108,7 @@ const useMembers = (rowsPerPage = 10) => {
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
     debounceTimeout.current = setTimeout(() => {
       updateFilters({ search: searchTerm });
-    }, 500);
+    }, 50);
   };
 
   const handleSort = (sortBy, sortOrder) => {
